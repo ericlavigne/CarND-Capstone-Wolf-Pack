@@ -54,6 +54,16 @@ cd CarND-Capstone/ros
 roslaunch launch/site.launch
 ```
 
+
+### Running the simulator with visualisation
+```bash
+cd ros
+catkin_make
+source devel/setup.sh
+roslaunch launch/wolfpack.launch
+```
+
+
 ### Unit Testing
 To run a single unit test with all the rosout logging in the console
 ```bash
