@@ -67,10 +67,10 @@ class TestWayPointUpdater(unittest.TestCase):
             self.assert_(len(lane.waypoints) > 0)
 
         rospy.Subscriber('/final_waypoints', Lane, callback)
-        rospy.sleep(0.2)
+        rospy.sleep(0.1)
 
         self.generate_pose(1131.22, 1183.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607)
-        timeout_t = time.time() + 2.0
+        timeout_t = time.time() + 1.0
         while not rospy.is_shutdown() and not self.test_final_path_on_initial_pose_called and time.time() < timeout_t:
             rospy.sleep(0.1)
 
