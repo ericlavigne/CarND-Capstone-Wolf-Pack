@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <!--Waypoint Loader-->
+    <include file = "$(find waypoint_loader)/launch/waypoint_loader.launch" />
+    <node pkg="waypoint_updater" type="waypoint_updater.py" name="waypoint_updater" />
+    <test pkg="waypoint_updater" type="test_waypoint_updater.py" test-name="test_waypoint_updater"/>
+</launch>
