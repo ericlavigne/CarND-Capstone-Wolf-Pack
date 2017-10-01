@@ -52,13 +52,6 @@ class TestVisualisationHelper(unittest.TestCase):
     def test_something(self):
         self.assert_(1==1)
 
-    def waypoint_loaded_callback(self, lane):
-        # rospy.loginfo('pose_callback: %s', lane)
-        pass
-
-
-
-
 
 if __name__ == '__main__':
     import rostest
