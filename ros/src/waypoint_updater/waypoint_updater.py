@@ -26,27 +26,46 @@ LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this n
 
 class WaypointUpdater(object):
     def __init__(self):
+        # Initialize the node with the Master Process
         rospy.init_node('waypoint_updater')
-
+        
+        # Subscribers
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
-
-        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
-
+        # Publishers
+        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)        
+        
         # TODO: Add other member variables you need below
+        self.car_pose = None
+        self.car_position = None
+        self.car_orientation = None
+        self.waypoints = []
+        self.final_waypoints = []
+        self.do_work()
 
-        rospy.spin()
+    def do_work(self):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+                self.generate_final_waypoints(self.car_position, self.waypoints)
+                self.publish()
+                rate.sleep()
 
     def pose_cb(self, msg):
         # TODO: Implement
-        pass
+        while msg.pose is None:
+              pass
+        self.car_pose = msg.pose
+        self.car_position = self.car_pose.position       
 
-    def waypoints_cb(self, waypoints):
+    def waypoints_cb(self, msg):
         # TODO: Implement
-        pass
+        while msg.waypoints is None:
+              pass
+        for waypoint in msg.waypoints:
+                self.waypoints.append(waypoint)
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
@@ -55,6 +74,39 @@ class WaypointUpdater(object):
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
         pass
+
+    def generate_final_waypoints(self, position, waypoints):
+        closestWaypoint = self.closest_waypoint(position, waypoints)
+        velocity = 4.4704 # 10 mph in mps
+        self.final_waypoints = [] #start with an empty list
+        if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
+            for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
+                    self.set_waypoint_velocity(waypoints, idx, velocity)
+                    self.final_waypoints.append(waypoints[idx])
+        else:
+            for idx in range(closestWaypoint, len(waypoints)):
+                    self.set_waypoint_velocity(waypoints, idx, velocity)
+                    self.final_waypoints.append(waypoints[idx])
+    
+    def publish(self):
+        final_waypoints_msg = Lane()
+        final_waypoints_msg.waypoints = list(self.final_waypoints)
+        self.final_waypoints_pub.publish(final_waypoints_msg)    
+
+    def closest_waypoint(self, position, waypoints):
+        closestLen = 100000.0
+        closestWaypoint = 0
+        dist = 0.0
+        for idx in range(0, len(waypoints)):
+                x = position.x
+                y = position.y
+                map_x = waypoints[idx].pose.pose.position.x
+                map_y = waypoints[idx].pose.pose.position.y
+                dist = self.distance_any(x, y, map_x, map_y)
+                if (dist < closestLen):
+                        closestLen = dist
+                        closestWaypoint = idx
+        return closestWaypoint
 
     def get_waypoint_velocity(self, waypoint):
         return waypoint.twist.twist.linear.x
@@ -70,9 +122,13 @@ class WaypointUpdater(object):
             wp1 = i
         return dist
 
+    def distance_any(self, x1, y1, x2, y2):
+        return math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
+
 
 if __name__ == '__main__':
     try:
         WaypointUpdater()
     except rospy.ROSInterruptException:
         rospy.logerr('Could not start waypoint updater node.')
+        
