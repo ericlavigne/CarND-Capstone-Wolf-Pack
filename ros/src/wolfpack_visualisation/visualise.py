@@ -11,48 +11,40 @@ class WolfpackVisualizationHelper(object):
 
         rospy.Subscriber("/current_pose", PoseStamped, self.current_pose_callback)
         rospy.Subscriber("/base_waypoints", Lane, self.base_waypoints_callback)
+        rospy.Subscriber("/final_waypoints", Lane, self.final_waypoints_callback)
 
         self.path_pub = rospy.Publisher('/navigation/waypoints', Path, queue_size=1, latch=True)
+        self.final_path_pub = rospy.Publisher('/navigation/final_waypoints', Path, queue_size=1)
 
         # self.publish_path()
-
         # rospy.logwarn("pose: %s", path)
 
         rospy.spin()
 
-    def publish_path(self):
+    # On receiving base_waypoints publish a list of paths for Rviz
+    def final_waypoints_callback(self, lane):
+        # rospy.logwarn(lane)
         path = Path()
         path.header.frame_id = "world"
-        path.poses.append(
-            self.generate_pose(1131.22, 1183.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-        path.poses.append(
-            self.generate_pose(1151.22, 1203.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-        path.poses.append(
-            self.generate_pose(1171.22, 1223.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-        path.poses.append(
-            self.generate_pose(1191.22, 1243.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
+
+        for waypoint in lane.waypoints:
+            wp_pose = waypoint.pose.pose
+            pose = self.generate_pose(wp_pose.position.x, wp_pose.position.y, 0, 0, 0, 0, 0)
+            path.poses.append(pose)
+
+        self.final_path_pub.publish(path)
+
+    # On receiving base_waypoints publish a list of paths for Rviz
+    def base_waypoints_callback(self, lane):
+        path = Path()
+        path.header.frame_id = "world"
+
+        for waypoint in lane.waypoints:
+            wp_pose = waypoint.pose.pose
+            pose = self.generate_pose(wp_pose.position.x, wp_pose.position.y, 0, 0, 0, 0, 0)
+            path.poses.append(pose)
 
         self.path_pub.publish(path)
-
-
-    # def loop(self):
-    #     rate = rospy.Rate(1) # 50Hz
-    #     while not rospy.is_shutdown():
-    #         path = Path()
-    #         path.header.frame_id = "world"
-    #         path.poses.append(
-    #             self.generate_pose(1131.22, 1183.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-    #         path.poses.append(
-    #             self.generate_pose(1151.22, 1203.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-    #         path.poses.append(
-    #             self.generate_pose(1171.22, 1223.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-    #         path.poses.append(
-    #             self.generate_pose(1191.22, 1243.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607))
-    #
-    #
-    #         self.path_pub.publish(path)
-    #         rate.sleep()
-
 
     def current_pose_callback(self, pose_stamped):
         pass
@@ -69,18 +61,7 @@ class WolfpackVisualizationHelper(object):
         pose.pose.orientation.w = ow
         return pose
 
-    # On receiving base_waypoints publish a list of paths for Rviz
-    def base_waypoints_callback(self, lane):
-        path = Path()
-        path.header.frame_id = "world"
 
-        for waypoint in lane.waypoints:
-            wp_pose = waypoint.pose.pose
-            pose = self.generate_pose(wp_pose.position.x, wp_pose.position.y, 0, 0, 0, 0, 0)
-            path.poses.append(pose)
-
-        self.path_pub.publish(path)
-        pass
 
 
 if __name__ == '__main__':

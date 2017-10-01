@@ -8,7 +8,8 @@ Panels:
         - /Status1
         - /Grid1
         - /Grid1/Offset1
-        - /Path1
+        - /Path-BaseWP1
+        - /Path-Final_WP1
         - /Pose1
       Splitter Ratio: 0.5
     Tree Height: 895
@@ -46,24 +47,24 @@ Visualization Manager:
       Name: Grid
       Normal Cell Count: 0
       Offset:
-        X: 1250
-        Y: 1900
+        X: 1131
+        Y: 1183
         Z: 0
       Plane: XY
-      Plane Cell Count: 50
+      Plane Cell Count: 100
       Reference Frame: world
       Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 25; 255; 0
+      Color: 255; 255; 255
       Enabled: true
       Head Diameter: 0.300000012
       Head Length: 0.200000003
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: Path
+      Name: Path-BaseWP
       Offset:
         X: 0
         Y: 0
@@ -77,6 +78,29 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 255; 0; 255
+      Enabled: true
+      Head Diameter: 0.300000012
+      Head Length: 0.200000003
+      Length: 0.300000012
+      Line Style: Lines
+      Line Width: 0.0299999993
+      Name: Path-Final_WP
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.0299999993
+      Shaft Diameter: 0.100000001
+      Shaft Length: 0.100000001
+      Topic: /navigation/final_waypoints
+      Unreliable: false
+      Value: true
+    - Alpha: 0.5
       Axes Length: 1
       Axes Radius: 0.100000001
       Class: rviz/Pose
@@ -85,7 +109,7 @@ Visualization Manager:
       Head Length: 30
       Head Radius: 10
       Name: Pose
-      Shaft Length: 15
+      Shaft Length: 5
       Shaft Radius: 10
       Shape: Arrow
       Topic: /current_pose
@@ -115,25 +139,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3490.34106
+      Distance: 649.467529
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1250
-        Y: 1900
+        X: 0
+        Y: 0
         Z: 1.94087625e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.40539658
-      Target Frame: world
+      Pitch: 1.11539686
+      Target Frame: base_link
       Value: Orbit (rviz)
-      Yaw: 4.71356583
+      Yaw: 4.44356537
     Saved: ~
 Window Geometry:
   Displays:
