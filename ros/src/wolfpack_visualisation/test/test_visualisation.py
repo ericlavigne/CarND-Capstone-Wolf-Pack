@@ -27,6 +27,10 @@ class TestVisualisationHelper(unittest.TestCase):
         # rospy.logwarn(path)
         pass
 
+    def waypoint_loaded_callback(self, lane):
+        # rospy.logwarn(path)
+        pass
+
     def generate_pose(self, px, py, pz, ox, oy, oz, ow):
         pose = PoseStamped()
         pose.pose.position.x = px
@@ -58,4 +62,4 @@ class TestVisualisationHelper(unittest.TestCase):
 
 if __name__ == '__main__':
     import rostest
-    rostest.rosrun(PKG, 'test_visualisation', TestVisualisationHelper)
+    rostest.rosrun(PKG, 'test_visualisation', TestVisualisationHelper, sys.argv)
