@@ -54,8 +54,6 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
 
-        self.threshold = 3
-
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -70,6 +68,7 @@ class TLDetector(object):
         # If ground truth data from tl is enabled.
         if self.use_ground_truth:
             light_wp, state = self.get_next_trafic_light_from_gt()
+            light_wp = light_wp if state == TrafficLight.RED else -1
             self.upcoming_red_light_pub.publish(Int32(light_wp))
 
     def image_cb(self, msg):
