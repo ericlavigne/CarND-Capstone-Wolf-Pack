@@ -1,0 +1,11 @@
+   <launch>
+     <arg name="bagdir" required="true"/>
+     <arg name="bagfile" default="just_traffic_light.bag" />
+     <arg name="targetdir" default="ROS_HOME" />
+
+     <node pkg="rosbag" type="play" name="rosbag" args="-d 2 $(arg bagdir)/$(arg bagfile)"/>
+     <node pkg="image_view" type="image_saver" name="image_saver" respawn="false" output="screen" cwd="$(arg targetdir)">
+       <param name="save_all_image" value="true"/>
+       <remap from="image" to="image_raw"/>
+     </node>
+   </launch>
