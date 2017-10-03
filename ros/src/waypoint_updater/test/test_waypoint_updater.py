@@ -52,7 +52,6 @@ class TestWayPointUpdater(unittest.TestCase):
         # rospy.loginfo('pose_callback: %s', pose_stamped)
         pass
 
-
     # Test that it can find the closest waypoints to the car
     # this test will probably change as we develop the code further
     def test_final_path_on_initial_pose(self):
@@ -65,16 +64,17 @@ class TestWayPointUpdater(unittest.TestCase):
             self.assertEqual(waypoint.pose.pose.position.x, 1131.19)
             self.assertEqual(waypoint.pose.pose.position.y, 1183.42)
             self.assert_(len(lane.waypoints) > 0)
+            # self.assert_(waypoint.pose.pose.position.x==0)
 
         rospy.Subscriber('/final_waypoints', Lane, callback)
-        rospy.sleep(0.1)
+        rospy.sleep(0.5)
 
         self.generate_pose(1131.22, 1183.27, 0.1069651, 0.0, 0.0, 0.0436201197059, 0.999048189607)
         timeout_t = time.time() + 1.0
         while not rospy.is_shutdown() and not self.test_final_path_on_initial_pose_called and time.time() < timeout_t:
             rospy.sleep(0.1)
 
-        # self.assert_(self.test_final_path_on_initial_pose_called)
+        self.assert_(self.test_final_path_on_initial_pose_called)
 
 
 
