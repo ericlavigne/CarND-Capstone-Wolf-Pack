@@ -54,3 +54,64 @@ cd CarND-Capstone/ros
 roslaunch launch/site.launch
 ```
 
+
+### Running the simulator with visualisation
+```bash
+cd ros
+catkin_make
+source devel/setup.sh
+roslaunch launch/wolfpack.launch
+```
+
+
+### Unit Testing
+To run a single unit test with all the rosout logging in the console
+```bash
+# from ros dir
+rostest --text src/waypoint_updater/test/waypoint_updater.test
+```
+
+To run all ROS unit tests
+```bash
+# from ros dir
+catkin_make run_tests
+```
+
+
+To watch for file changes and run unit tests on any file modifications.
+If the below commands don't work on windows then change the watch-run.sh,
+uncomment the inotify command and comment out the existing inotify command
+```bash
+# from ros dir watch src dir and run single test
+./watch-run.sh src "rostest --text src/waypoint_updater/test/waypoint_updater.test"
+
+# from ros dir watch src dir and run all unit tests
+./watch-run.sh src "catkin_make run_tests"
+```
+
+##### Adding tests to new package
+read http://wiki.ros.org/rostest/Writing
+1. Create a ROS test file
+e.g. ros/src/waypoint_updater/test/test_waypoint_updater.py
+
+2. Create a launch file with the node to test. Add a node pointing to the test file
+e.g. ros/src/waypoint_updater/test/waypoint_updater.test
+```
+<launch>
+  <node pkg="mypkg" type="mynode" name="mynode" />
+  <test test-name="test_mynode" pkg="mypkg" type="test_mynode" />
+</launch>
+```
+
+3. add to CmakeLists.txt in the module
+```
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  add_rostest(test/waypoint_updater.test)
+endif()
+```
+
+4. Add the below to the package.xml
+```
+  <build_depend>rostest</build_depend>
+```

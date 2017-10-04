@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
-  <name>waypoint_updater</name>
+  <name>wolfpack_visualisation</name>
   <version>0.0.0</version>
-  <description>The waypoint_updater package</description>
+  <description>The wolfpack_visualisation package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="yousuf@todo.todo">yousuf</maintainer>
+  <maintainer email="william@todo.todo">william</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/tl_detector</url> -->
+  <!-- <url type="website">http://wiki.ros.org/wolfpack_visualisation</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -53,7 +53,6 @@
   <run_depend>sensor_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>styx_msgs</run_depend>
-
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

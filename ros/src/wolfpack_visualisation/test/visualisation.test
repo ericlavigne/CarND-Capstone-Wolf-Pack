@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <!--Waypoint Loader -->
+    <include file="$(find waypoint_loader)/launch/waypoint_loader.launch" />
+    <node pkg="wolfpack_visualisation" type="visualise.py" name="visualize" />
+    <test pkg="wolfpack_visualisation" type="test_visualisation.py" test-name="test_visualisation" />
+</launch>

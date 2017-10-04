@@ -5,7 +5,7 @@ from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 
 import math
-
+import time
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
 
@@ -26,27 +26,62 @@ LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this n
 
 class WaypointUpdater(object):
     def __init__(self):
-        rospy.init_node('waypoint_updater')
+        rospy.init_node('waypoint_updater', log_level=rospy.DEBUG)
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
-
-        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+        self.final_waypoints_pub = rospy.Publisher('/final_waypoints', Lane, queue_size=1)
 
         # TODO: Add other member variables you need below
-
+        self.base_waypoints = None
+        self.shortest_distance_index = -1
         rospy.spin()
 
     def pose_cb(self, msg):
         # TODO: Implement
-        pass
+        # rospy.loginfo("pose_cb called")
+        # rospy.logwarn("warning: pose")
+        # rospy.logdebug("Debug: pose_cb called2")
+        # if(self.waypoint_index):
+        def distance(x, y, x1, y1):
+            return math.sqrt((x-x1)*(x-x1) + (y-y1)*(y-y1))
+
+        pos_x = msg.pose.position.x
+        pos_y = msg.pose.position.y
+
+        time_t = time.time()
+
+        if(self.base_waypoints is not None):
+            shortest_distance = 9999999999.0
+            self.shortest_distance_index = 0
+            for i in range(len(self.base_waypoints.waypoints)):
+                waypoint = self.base_waypoints.waypoints[i]
+                x1 = waypoint.pose.pose.position.x
+                y1 = waypoint.pose.pose.position.y
+                d = distance(pos_x, pos_y, x1, y1)
+                if d < shortest_distance:
+                    shortest_distance = d
+                    self.shortest_distance_index = i
+
+            # rospy.logwarn('shortest_distance_index: %d', self.shortest_distance_index)
+
+            # TODO: should use LOOKAHEAD_WPS instead of 20
+            waypoints = self.base_waypoints.waypoints[self.shortest_distance_index:self.shortest_distance_index+20]
+            # rospy.logwarn(waypoints)
+
+            lane = Lane()
+            lane.waypoints.extend(waypoints)
+
+            self.final_waypoints_pub.publish(lane)
+        # rospy.logwarn('time taken for pose_cb: %f', time.time() - time_t)
+        # pass
 
     def waypoints_cb(self, waypoints):
         # TODO: Implement
-        pass
+        self.base_waypoints = waypoints
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
