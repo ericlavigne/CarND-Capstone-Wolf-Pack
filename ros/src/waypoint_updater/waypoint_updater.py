@@ -30,15 +30,15 @@ class WaypointUpdater(object):
         rospy.init_node('waypoint_updater')
         
         # Subscribers
-        rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        self.current_pose_sub = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+        self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
         # Publishers
-        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)        
-        
-        # TODO: Add other member variables you need below
+        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+       
+        # Member variables
         self.car_pose = None
         self.car_position = None
         self.car_orientation = None
@@ -47,25 +47,25 @@ class WaypointUpdater(object):
         self.do_work()
 
     def do_work(self):
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(2)
         while not rospy.is_shutdown():
                 self.generate_final_waypoints(self.car_position, self.waypoints)
                 self.publish()
                 rate.sleep()
 
     def pose_cb(self, msg):
-        # TODO: Implement
         while msg.pose is None:
-              pass
+              rate.sleep(0.5)
         self.car_pose = msg.pose
         self.car_position = self.car_pose.position       
 
     def waypoints_cb(self, msg):
-        # TODO: Implement
         while msg.waypoints is None:
-              pass
+              rate.sleep(0.5)
         for waypoint in msg.waypoints:
                 self.waypoints.append(waypoint)
+        self.base_waypoints_sub.unregister()
+        rospy.loginfo("Unregistered from /base_waypoints topic")
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
@@ -76,17 +76,20 @@ class WaypointUpdater(object):
         pass
 
     def generate_final_waypoints(self, position, waypoints):
-        closestWaypoint = self.closest_waypoint(position, waypoints)
-        velocity = 4.4704 # 10 mph in mps
-        self.final_waypoints = [] #start with an empty list
-        if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
-            for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
-                    self.set_waypoint_velocity(waypoints, idx, velocity)
-                    self.final_waypoints.append(waypoints[idx])
+        if waypoints is not None:
+           closestWaypoint = self.closest_waypoint(position, waypoints)
+           velocity = 4.4704 #10 mph in mps
+           self.final_waypoints = []
+           if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
+               for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
+                       self.set_waypoint_velocity(waypoints, idx, velocity)
+                       self.final_waypoints.append(waypoints[idx])
+           else:
+               for idx in range(closestWaypoint, len(waypoints)):
+                       self.set_waypoint_velocity(waypoints, idx, velocity)
+                       self.final_waypoints.append(waypoints[idx])
         else:
-            for idx in range(closestWaypoint, len(waypoints)):
-                    self.set_waypoint_velocity(waypoints, idx, velocity)
-                    self.final_waypoints.append(waypoints[idx])
+           rospy.logwarn("No waypoints received") 
     
     def publish(self):
         final_waypoints_msg = Lane()
