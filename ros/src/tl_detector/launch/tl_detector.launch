@@ -1,4 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <node pkg="tl_detector" type="tl_detector.py" name="tl_detector" output="screen" cwd="node"/>
+    <arg name="use_ground_truth" default="false" />
+
+    <node pkg="tl_detector" type="tl_detector.py" name="tl_detector" output="log" cwd="node" args="$(arg use_ground_truth)"/>
 </launch>
