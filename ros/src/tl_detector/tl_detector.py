@@ -6,6 +6,7 @@ from geometry_msgs.msg import PoseStamped, Pose
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
+from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge
 from light_classification.tl_classifier import TLClassifier
 from math import pow, sqrt
@@ -13,8 +14,19 @@ import tf
 import cv2
 import yaml
 import sys
+from keras import backend as K
 
 STATE_COUNT_THRESHOLD = 3
+SMOOTH = 1.
+
+def dice_coef(y_true, y_pred):
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2. * intersection + SMOOTH) / (K.sum(y_true_f) + K.sum(y_pred_f) + SMOOTH)
+
+def dice_coef_loss(y_true, y_pred):
+    return -dice_coef(y_true, y_pred)
 
 class TLDetector(object):
     def __init__(self):
@@ -31,6 +43,10 @@ class TLDetector(object):
         self.lights = []
         self.use_ground_truth = sys.argv[1].lower() == 'true'
         self.distance_to_tl_threshold = 50.0
+        self.state = TrafficLight.UNKNOWN
+        self.last_state = TrafficLight.UNKNOWN
+        self.last_wp = -1
+        self.state_count = 0
 
         rospy.loginfo("[TL_DETECTOR] Use GT for TL: %s", self.use_ground_truth)
 
@@ -65,16 +81,11 @@ class TLDetector(object):
         self.light_classifier.setup_classifier(model, resize_width, resize_height)
 
         #Detector setup
-        self.detector_model = load_model(self.config['tl']['tl_detection_model'])
+        self.detector_model = load_model(self.config['tl']['tl_detection_model'], custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef })
         self.resized_width = self.config['tl']['detector_resize_width']
         self.resize_height = self.config['tl']['detector_resize_height']
         self.is_carla = self.config['tl']['is_carla']
         self.projection_threshold = self.config['tl']['projection_threshold']
-
-        self.state = TrafficLight.UNKNOWN
-        self.last_state = TrafficLight.UNKNOWN
-        self.last_wp = -1
-        self.state_count = 0
 
         rospy.spin()
 
@@ -243,6 +254,7 @@ class TLDetector(object):
                 closest_wp = self.waypoints[wp_id]
                 waypoint_dist = self.dist_to_point(closest_wp.pose.pose, tl.pose.pose)
                 car_dist = self.dist_to_point(self.pose.pose, stop_line_pose)
+                state = TrafficLight.UNKNOWN
                 if self.use_ground_truth:
                     state = tl.state
                     rospy.loginfo("[TL_DETECTOR] Using ground-truth information. Nearest TL-state is: %s", state)
