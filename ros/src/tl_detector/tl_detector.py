@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 import rospy
+import numpy as np
 from keras.models import load_model
 from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped, Pose
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
-from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge
 from light_classification.tl_classifier import TLClassifier
 from math import pow, sqrt
-import tf
+import tensorflow as tf
 import cv2
 import yaml
 import sys
@@ -36,10 +36,6 @@ class TLDetector(object):
         self.waypoints = None
         self.camera_image = None
         self.detector_model = None
-        self.resized_width = -1
-        self.resized_height = -1
-        self.resized_height_ratio = -1
-        self.resized_width_ratio = -1
         self.lights = []
         self.use_ground_truth = sys.argv[1].lower() == 'true'
         self.distance_to_tl_threshold = 50.0
@@ -49,6 +45,27 @@ class TLDetector(object):
         self.state_count = 0
 
         rospy.loginfo("[TL_DETECTOR] Use GT for TL: %s", self.use_ground_truth)
+
+        config_string = rospy.get_param("/traffic_light_config")
+        self.config = yaml.load(config_string)
+
+        # Classifier Setup
+        self.light_classifier = TLClassifier()
+        model = load_model(self.config['tl']['tl_classification_model'])
+        resize_width = self.config['tl']['classifier_resize_width']
+        resize_height = self.config['tl']['classifier_resize_height']
+        self.light_classifier.setup_classifier(model, resize_width, resize_height)
+
+        #Detector setup
+        self.detector_model = load_model(self.config['tl']['tl_detection_model'], custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef })
+	self.detector_model._make_predict_function()
+        self.resize_width = self.config['tl']['detector_resize_width']
+        self.resize_height = self.config['tl']['detector_resize_height']
+        self.resize_height_ratio = self.config['camera_info']['image_height']/self.resize_height
+        self.resize_width_ratio = self.config['camera_info']['image_width']/self.resize_width
+	self.middle_col = self.resize_width/2
+        self.is_carla = self.config['tl']['is_carla']
+        self.projection_threshold = self.config['tl']['projection_threshold']
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -61,31 +78,13 @@ class TLDetector(object):
         rely on the position of the light and the camera image to predict it.
         '''
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-        sub4 = rospy.Subscriber('camera_info', CameraInfo, self.camera_info_cb)
 
         if not self.use_ground_truth:
             sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
-        config_string = rospy.get_param("/traffic_light_config")
-        self.config = yaml.load(config_string)
-
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-
-        # Classifier Setup
-        self.light_classifier = TLClassifier()
-        model = load_model(self.config['tl']['tl_classification_model'])
-        resize_width = self.config['tl']['classifier_resize_width']
-        resize_height = self.config['tl']['classifier_resize_height']
-        self.light_classifier.setup_classifier(model, resize_width, resize_height)
-
-        #Detector setup
-        self.detector_model = load_model(self.config['tl']['tl_detection_model'], custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef })
-        self.resized_width = self.config['tl']['detector_resize_width']
-        self.resize_height = self.config['tl']['detector_resize_height']
-        self.is_carla = self.config['tl']['is_carla']
-        self.projection_threshold = self.config['tl']['projection_threshold']
 
         rospy.spin()
 
@@ -103,12 +102,6 @@ class TLDetector(object):
             light_wp, state = self.process_traffic_lights()
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.upcoming_red_light_pub.publish(Int32(light_wp))
-
-    def camera_info_cb(self, msg):
-        if self.resize_height != -1 and self.resize_width != -1:
-            if self.resized_height_ratio == -1 and self.resized_width_ratio == -1:
-                self.resized_height_ratio = msg.height/self.resize_height
-                self.resized_width_ratio = msg.width/self.resize_width
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -174,21 +167,18 @@ class TLDetector(object):
                     closest_wp_idx = idx
         return closest_wp_idx
 
-    def extract_image(pred_image_mask, image):
-        #if not (np.any(pred_image_mask[:,:] > 220)):
-        #    return None
-
+    def _extract_image(self, pred_image_mask, image):
         column_projection = np.sum(pred_image_mask, axis = 0)
 
         if (np.max(column_projection) < self.projection_threshold):
             return None
 
-        non_zero_column_index = np.argwhere(column_projection > projection_threshold)
+        non_zero_column_index = np.argwhere(column_projection > self.projection_threshold)
 
         if non_zero_column_index.size == 0:
             return None
 
-        index_of_column_index =  np.argmin(np.abs(non_zero_column_index - middle_col))
+        index_of_column_index =  np.argmin(np.abs(non_zero_column_index - self.middle_col))
         column_index = non_zero_column_index[index_of_column_index][0]
 
         zero_colum_indexes = np.argwhere(column_projection == 0)
@@ -203,23 +193,21 @@ class TLDetector(object):
         zero_row_indexes = np.argwhere(row_projection == 0)
         top = np.max(zero_row_indexes[zero_row_indexes < row_index])
         bottom = np.min(zero_row_indexes[zero_row_indexes > row_index])
-
-        return image[int(top*self.resized_height_ratio):int(bottom*self.resized_height_ratio), int(left*self.resized_width_ratio):int(right*self.resized_width_ratio)] 
+        return image[int(top*self.resize_height_ratio):int(bottom*self.resize_height_ratio), int(left*self.resize_width_ratio):int(right*self.resize_width_ratio)] 
 
     def detect_traffic_light(self, cv_image):
-        if self.resized_width_ratio == -1 or self.resized_height_ratio == -1:
-            return None
-
-        resized_image = cv2.cvtColor(cv2.resize(cv_image, (self.resize_width, self.resize_height)), cv2.COLOR_RGB2GRAY)
+        resize_image = cv2.cvtColor(cv2.resize(cv_image, (self.resize_width, self.resize_height)), cv2.COLOR_RGB2GRAY)
+	resize_image = resize_image[..., np.newaxis]
         if self.is_carla:
-            mean = np.mean(resized_image) # mean for data centering
-            std = np.std(resized_image) # std for data normalization
+            mean = np.mean(resize_image) # mean for data centering
+            std = np.std(resize_image) # std for data normalization
 
-            resized_image -= mean
-            resized_image /= std
+            resize_image -= mean
+            resize_image /= std
 
-        image_mask = self.detector_model.predict(resized_image)
-        return extract_image(image_mask, cv_image)
+        image_mask = self.detector_model.predict(resize_image[None, :, :, :], batch_size=1)[0]
+	image_mask = (image_mask[:,:,0]*255).astype(np.uint8)
+        return self._extract_image(image_mask, cv_image)
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -261,7 +249,7 @@ class TLDetector(object):
                 elif(car_dist<self.distance_to_tl_threshold):
                     cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, self.config['tl']['color_mode'])
                     tl_image = self.detect_traffic_light(cv_image)
-                    if tl_image != None:
+                    if tl_image is not None:
                         state = self.light_classifier.get_classification(tl_image)
                         rospy.loginfo("[TL_DETECTOR] Nearest TL-state is: %s", state)
                     else:
