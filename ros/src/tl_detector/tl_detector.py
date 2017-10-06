@@ -67,6 +67,7 @@ class TLDetector(object):
         self.middle_col = self.resize_width/2
         self.is_carla = self.config['tl']['is_carla']
         self.projection_threshold = self.config['tl']['projection_threshold']
+        self.color_mode = self.config['tl']['color_mode']
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -174,7 +175,7 @@ class TLDetector(object):
         if (np.max(column_projection) < self.projection_threshold):
             return None
 
-        non_zero_column_index = np.argwhere(column_projection > self.projection_threshold)
+        non_zero_column_index = np.argwhere(column_projection >= self.projection_threshold)
 
         if non_zero_column_index.size == 0:
             return None
@@ -183,8 +184,10 @@ class TLDetector(object):
         column_index = non_zero_column_index[index_of_column_index][0]
 
         zero_colum_indexes = np.argwhere(column_projection == 0)
-        left = np.max(zero_colum_indexes[zero_colum_indexes < column_index])
-        right = np.min(zero_colum_indexes[zero_colum_indexes > column_index])
+        left_side = zero_colum_indexes[zero_colum_indexes < column_index]
+        left = np.max(left_side) if left_side.size > 0 else 0
+        right_side = zero_colum_indexes[zero_colum_indexes > column_index]
+        right = np.min(right_side) if right_side.size > 0 else self.resize_width
 
         #roi = pred_image_mask[:,left:right]
 
@@ -192,8 +195,10 @@ class TLDetector(object):
         row_index =  np.argmax(row_projection)
 
         zero_row_indexes = np.argwhere(row_projection == 0)
-        top = np.max(zero_row_indexes[zero_row_indexes < row_index])
-        bottom = np.min(zero_row_indexes[zero_row_indexes > row_index])
+        top_part = zero_row_indexes[zero_row_indexes < row_index]
+        top = np.max(top_part) if top_part.size > 0 else 0
+        bottom_part = zero_row_indexes[zero_row_indexes > row_index]
+        bottom = np.min(bottom_part) if bottom_part.size > 0 else self.resize_height
         return image[int(top*self.resize_height_ratio):int(bottom*self.resize_height_ratio), int(left*self.resize_width_ratio):int(right*self.resize_width_ratio)] 
 
     def detect_traffic_light(self, cv_image):
@@ -215,7 +220,6 @@ class TLDetector(object):
             location and color
 
         Returns:
-            int: index of waypoint closes to the upcoming stop line for a traffic light (-1 if none exists)
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
@@ -248,7 +252,7 @@ class TLDetector(object):
                     state = tl.state
                     rospy.loginfo("[TL_DETECTOR] Using ground-truth information. Nearest TL-state is: %s", state)
                 elif(car_dist<self.distance_to_tl_threshold):
-                    cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, self.config['tl']['color_mode'])
+                    cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, self.color_mode)
                     tl_image = self.detect_traffic_light(cv_image)
                     if tl_image is not None:
                         state = self.light_classifier.get_classification(tl_image)
