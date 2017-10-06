@@ -61,9 +61,10 @@ class TLDetector(object):
 	self.detector_model._make_predict_function()
         self.resize_width = self.config['tl']['detector_resize_width']
         self.resize_height = self.config['tl']['detector_resize_height']
-        self.resize_height_ratio = self.config['camera_info']['image_height']/self.resize_height
-        self.resize_width_ratio = self.config['camera_info']['image_width']/self.resize_width
-	self.middle_col = self.resize_width/2
+        
+        self.resize_height_ratio = self.config['camera_info']['image_height']/float(self.resize_height)
+        self.resize_width_ratio = self.config['camera_info']['image_width']/float(self.resize_width)
+        self.middle_col = self.resize_width/2
         self.is_carla = self.config['tl']['is_carla']
         self.projection_threshold = self.config['tl']['projection_threshold']
 
@@ -206,7 +207,7 @@ class TLDetector(object):
             resize_image /= std
 
         image_mask = self.detector_model.predict(resize_image[None, :, :, :], batch_size=1)[0]
-	image_mask = (image_mask[:,:,0]*255).astype(np.uint8)
+        image_mask = (image_mask[:,:,0]*255).astype(np.uint8)
         return self._extract_image(image_mask, cv_image)
 
     def process_traffic_lights(self):
