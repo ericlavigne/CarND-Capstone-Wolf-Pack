@@ -8,3 +8,5 @@ scipy
 keras
 tensorflow
 h5py
+catkin_pkg
+empy

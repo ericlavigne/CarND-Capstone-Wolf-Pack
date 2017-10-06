@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(waypoint_updater)
+project(wolfpack_visualisation)
 
-## Add support for C++11, supported in ROS Kinetic and newer
-# add_definitions(-std=c++11)
+## Compile as C++11, supported in ROS Kinetic and newer
+# add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -73,7 +73,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   geometry_msgs#   sensor_msgs#   std_msgs#   styx_msgs
+#   std_msgs  # Or other packages containing msgs
 # )
 
 ################################################
@@ -107,8 +107,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES waypoint_updater
-#  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs styx_msgs styx_utils
+#  LIBRARIES wolfpack_visualisation
+#  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
 
@@ -118,14 +118,14 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+# include
+# ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/waypoint_updater.cpp
+#   src/${PROJECT_NAME}/wolfpack_visualisation.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -136,7 +136,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/waypoint_updater_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/wolfpack_visualisation_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -193,7 +193,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_waypoint_updater.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_wolfpack_visualisation.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
@@ -201,7 +201,8 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
-  add_rostest(test/waypoint_updater.test)
+  add_rostest(test/visualisation.test)
 endif()
