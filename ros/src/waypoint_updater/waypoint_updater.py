@@ -21,67 +21,50 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 200# Number of waypoints we will publish. You can change this number
 
 
 class WaypointUpdater(object):
     def __init__(self):
-        rospy.init_node('waypoint_updater', log_level=rospy.DEBUG)
-
-        rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        # Initialize the node with the Master Process
+        rospy.init_node('waypoint_updater')
+        
+        # Subscribers
+        self.current_pose_sub = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+        self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
-        self.final_waypoints_pub = rospy.Publisher('/final_waypoints', Lane, queue_size=1)
+        # Publishers
+        self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1, latch = True)
+       
+        # Member variables
+        self.car_pose = None
+        self.car_position = None
+        self.car_orientation = None
+        self.waypoints = []
+        self.final_waypoints = []
+        self.do_work()
 
-        # TODO: Add other member variables you need below
-        self.base_waypoints = None
-        self.shortest_distance_index = -1
-        rospy.spin()
+    def do_work(self):
+        rate = rospy.Rate(1)
+        while not rospy.is_shutdown():
+                if (self.car_position != None and self.waypoints != None):
+                       self.generate_final_waypoints(self.car_position, self.waypoints)
+                       self.publish()
+                else:
+                       rospy.logwarn("Message not received")       
+                rate.sleep()
 
     def pose_cb(self, msg):
-        # TODO: Implement
-        # rospy.loginfo("pose_cb called")
-        # rospy.logwarn("warning: pose")
-        # rospy.logdebug("Debug: pose_cb called2")
-        # if(self.waypoint_index):
-        def distance(x, y, x1, y1):
-            return math.sqrt((x-x1)*(x-x1) + (y-y1)*(y-y1))
+        self.car_pose = msg.pose
+        self.car_position = self.car_pose.position       
 
-        pos_x = msg.pose.position.x
-        pos_y = msg.pose.position.y
-
-        time_t = time.time()
-
-        if(self.base_waypoints is not None):
-            shortest_distance = 9999999999.0
-            self.shortest_distance_index = 0
-            for i in range(len(self.base_waypoints.waypoints)):
-                waypoint = self.base_waypoints.waypoints[i]
-                x1 = waypoint.pose.pose.position.x
-                y1 = waypoint.pose.pose.position.y
-                d = distance(pos_x, pos_y, x1, y1)
-                if d < shortest_distance:
-                    shortest_distance = d
-                    self.shortest_distance_index = i
-
-            # rospy.logwarn('shortest_distance_index: %d', self.shortest_distance_index)
-
-            # TODO: should use LOOKAHEAD_WPS instead of 20
-            waypoints = self.base_waypoints.waypoints[self.shortest_distance_index:self.shortest_distance_index+20]
-            # rospy.logwarn(waypoints)
-
-            lane = Lane()
-            lane.waypoints.extend(waypoints)
-
-            self.final_waypoints_pub.publish(lane)
-        # rospy.logwarn('time taken for pose_cb: %f', time.time() - time_t)
-        # pass
-
-    def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        self.base_waypoints = waypoints
+    def waypoints_cb(self, msg):
+        for waypoint in msg.waypoints:
+                self.waypoints.append(waypoint)
+        self.base_waypoints_sub.unregister()
+        rospy.loginfo("Unregistered from /base_waypoints topic")
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
@@ -90,6 +73,43 @@ class WaypointUpdater(object):
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
         pass
+
+    def generate_final_waypoints(self, position, waypoints):
+        closestWaypoint = self.closest_waypoint(position, waypoints)
+        #rospy.logwarn(closestWaypoint)
+        velocity = 4.4704 #10 mph in mps
+        self.final_waypoints = []
+        if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
+                for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
+                        self.set_waypoint_velocity(waypoints, idx, velocity)
+                        self.final_waypoints.append(waypoints[idx])
+        else:
+                for idx in range(closestWaypoint, len(waypoints)):
+                        self.set_waypoint_velocity(waypoints, idx, velocity)
+                        self.final_waypoints.append(waypoints[idx])
+    
+    def publish(self):
+        final_waypoints_msg = Lane()
+        #final_waypoints_msg.header.frame_id = '/world'
+        #final_waypoints_msg.header.stamp = rospy.time(0)
+        final_waypoints_msg.waypoints = list(self.final_waypoints)
+        #rospy.loginfo(final_waypoints_msg)
+        self.final_waypoints_pub.publish(final_waypoints_msg)    
+
+    def closest_waypoint(self, position, waypoints):
+        closestLen = float("inf")
+        closestWaypoint = 0
+        dist = 0.0
+        for idx in range(0, len(waypoints)):
+                x = position.x
+                y = position.y
+                map_x = waypoints[idx].pose.pose.position.x
+                map_y = waypoints[idx].pose.pose.position.y
+                dist = self.distance_any(x, y, map_x, map_y)
+                if (dist < closestLen):
+                        closestLen = dist
+                        closestWaypoint = idx
+        return closestWaypoint
 
     def get_waypoint_velocity(self, waypoint):
         return waypoint.twist.twist.linear.x
@@ -105,9 +125,13 @@ class WaypointUpdater(object):
             wp1 = i
         return dist
 
+    def distance_any(self, x1, y1, x2, y2):
+        return math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
+
 
 if __name__ == '__main__':
     try:
         WaypointUpdater()
     except rospy.ROSInterruptException:
         rospy.logerr('Could not start waypoint updater node.')
+        
