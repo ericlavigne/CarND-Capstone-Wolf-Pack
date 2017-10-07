@@ -43,6 +43,7 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+        self.has_image = False
 
         rospy.loginfo("[TL_DETECTOR] Use GT for TL: %s", self.use_ground_truth)
 
@@ -88,6 +89,11 @@ class TLDetector(object):
 
         self.bridge = CvBridge()
 
+        detector_rate = rospy.Rate(self.config['tl']['detector_rate'])
+        while not rospy.is_shutdown():
+            self.find_traffic_lights()
+            detector_rate.sleep()
+
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -116,6 +122,7 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
 
+    def find_traffic_lights(self):
         light_wp, state = self.process_traffic_lights()
 
         '''
@@ -224,7 +231,7 @@ class TLDetector(object):
 
         """
 
-        if self.pose is not None:
+        if self.pose is not None and self.has_image:
             tl_id = self.get_closest_waypoint(self.pose.pose, self.lights)
             rospy.logdebug("[TL_DETECTOR] Closest TL id: %s.", tl_id)
             if (tl_id >= 0):
