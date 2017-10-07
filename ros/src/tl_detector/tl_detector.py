@@ -16,7 +16,7 @@ import yaml
 import sys
 from keras import backend as K
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 SMOOTH = 1.
 
 def dice_coef(y_true, y_pred):
@@ -40,7 +40,6 @@ class TLDetector(object):
         self.use_ground_truth = sys.argv[1].lower() == 'true'
         self.distance_to_tl_threshold = 50.0
         self.state = TrafficLight.UNKNOWN
-        self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
         self.has_image = False
@@ -94,8 +93,6 @@ class TLDetector(object):
             self.find_traffic_lights()
             detector_rate.sleep()
 
-        rospy.spin()
-
     def pose_cb(self, msg):
         self.pose = msg
 
@@ -122,6 +119,11 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
 
+    def _pass_threshold(self):
+	if self.state == TrafficLight.YELLOW:
+            return self.state_count >= STATE_COUNT_THRESHOLD - 1
+        return self.state_count >= STATE_COUNT_THRESHOLD
+
     def find_traffic_lights(self):
         light_wp, state = self.process_traffic_lights()
 
@@ -134,14 +136,13 @@ class TLDetector(object):
         if self.state != state:
             self.state_count = 0
             self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            self.last_state = self.state
+        elif self._pass_threshold():
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-        self.state_count += 1
+            self.state_count += 1
 
     def dist_to_point(self, pose, wp_pose):
         x_squared = pow((pose.position.x - wp_pose.position.x), 2)
@@ -231,7 +232,7 @@ class TLDetector(object):
 
         """
 
-        if self.pose is not None and self.has_image:
+        if self.pose is not None and (self.has_image or self.use_ground_truth):
             tl_id = self.get_closest_waypoint(self.pose.pose, self.lights)
             rospy.logdebug("[TL_DETECTOR] Closest TL id: %s.", tl_id)
             if (tl_id >= 0):
