@@ -54,14 +54,10 @@ class WaypointUpdater(object):
                 rate.sleep()
 
     def pose_cb(self, msg):
-        while msg.pose is None:
-              rate.sleep(1.0)
         self.car_pose = msg.pose
         self.car_position = self.car_pose.position       
 
     def waypoints_cb(self, msg):
-        while msg.waypoints is None:
-              rate.sleep(1.0)
         for waypoint in msg.waypoints:
                 self.waypoints.append(waypoint)
         self.base_waypoints_sub.unregister()
