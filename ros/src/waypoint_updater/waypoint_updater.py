@@ -49,8 +49,11 @@ class WaypointUpdater(object):
     def do_work(self):
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
-                self.generate_final_waypoints(self.car_position, self.waypoints)
-                self.publish()
+                if (self.car_position != None and self.waypoints != None):
+                       self.generate_final_waypoints(self.car_position, self.waypoints)
+                       self.publish()
+                else:
+                       rospy.logwarn("Message not received")       
                 rate.sleep()
 
     def pose_cb(self, msg):
@@ -72,21 +75,18 @@ class WaypointUpdater(object):
         pass
 
     def generate_final_waypoints(self, position, waypoints):
-        if waypoints is not None:
-           closestWaypoint = self.closest_waypoint(position, waypoints)
-           #rospy.logwarn(closestWaypoint)
-           velocity = 4.4704 #10 mph in mps
-           self.final_waypoints = []
-           if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
-               for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
-                       self.set_waypoint_velocity(waypoints, idx, velocity)
-                       self.final_waypoints.append(waypoints[idx])
-           else:
-               for idx in range(closestWaypoint, len(waypoints)):
-                       self.set_waypoint_velocity(waypoints, idx, velocity)
-                       self.final_waypoints.append(waypoints[idx])
+        closestWaypoint = self.closest_waypoint(position, waypoints)
+        #rospy.logwarn(closestWaypoint)
+        velocity = 4.4704 #10 mph in mps
+        self.final_waypoints = []
+        if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
+                for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
+                        self.set_waypoint_velocity(waypoints, idx, velocity)
+                        self.final_waypoints.append(waypoints[idx])
         else:
-           rospy.logwarn("No waypoints received") 
+                for idx in range(closestWaypoint, len(waypoints)):
+                        self.set_waypoint_velocity(waypoints, idx, velocity)
+                        self.final_waypoints.append(waypoints[idx])
     
     def publish(self):
         final_waypoints_msg = Lane()
