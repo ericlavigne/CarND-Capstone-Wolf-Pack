@@ -60,7 +60,7 @@ roslaunch launch/site.launch
 cd ros
 catkin_make
 source devel/setup.sh
-roslaunch launch/wolfpack.launch use_ground_truth := true
+roslaunch launch/wolfpack.launch use_ground_truth:=true
 ```
 
 
