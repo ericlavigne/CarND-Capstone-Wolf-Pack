@@ -59,7 +59,7 @@ class TestWayPointUpdater(unittest.TestCase):
 
         def callback(lane):
             self.test_final_path_on_initial_pose_called = True
-            # rospy.logwarn(lane)
+            rospy.logwarn(lane)
             waypoint = lane.waypoints[0]
             self.assertEqual(waypoint.pose.pose.position.x, 1131.19)
             self.assertEqual(waypoint.pose.pose.position.y, 1183.42)
