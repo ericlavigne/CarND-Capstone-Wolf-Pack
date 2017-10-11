@@ -3,9 +3,11 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from std_msgs.msg import Int32
 
 import math
 import time
+import tf
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
 
@@ -32,6 +34,7 @@ class WaypointUpdater(object):
         # Subscribers
         self.current_pose_sub = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
@@ -42,15 +45,17 @@ class WaypointUpdater(object):
         self.car_pose = None
         self.car_position = None
         self.car_orientation = None
+        self.car_yaw = None
         self.waypoints = []
         self.final_waypoints = []
+        self.traffic_waypoint = None
         self.do_work()
 
     def do_work(self):
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None):
-                       self.generate_final_waypoints(self.car_position, self.waypoints)
+                       self.generate_final_waypoints(self.car_position, self.car_yaw, self.waypoints)
                        self.publish()
                 else:
                        if self.car_position == None:
@@ -61,7 +66,11 @@ class WaypointUpdater(object):
 
     def pose_cb(self, msg):
         self.car_pose = msg.pose
-        self.car_position = self.car_pose.position       
+        self.car_position = self.car_pose.position 
+        self.car_orientation = self.car_pose.orientation
+        quaternion = (self.car_orientation.x, self.car_orientation.y, self.car_orientation.z, self.car_orientation.w)
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        self.car_yaw = euler[2]
 
     def waypoints_cb(self, msg):
         for waypoint in msg.waypoints:
@@ -71,14 +80,16 @@ class WaypointUpdater(object):
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
-        pass
+        self.traffic_waypoint = msg.data
+        #rospy.logwarn(msg.data)
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
         pass
 
-    def generate_final_waypoints(self, position, waypoints):
-        closestWaypoint = self.closest_waypoint(position, waypoints)
+    def generate_final_waypoints(self, position, yaw, waypoints):
+        closestWaypoint = self.NextWaypoint(position, yaw, waypoints)
+        #closestWaypoint = self.closest_waypoint(position, waypoints)
         #rospy.logwarn(closestWaypoint)
         velocity = rospy.get_param('~/waypoint_loader/velocity', 40.0) * 0.44704
         self.final_waypoints = []
@@ -113,6 +124,16 @@ class WaypointUpdater(object):
                         closestLen = dist
                         closestWaypoint = idx
         return closestWaypoint
+
+    def NextWaypoint(self, position, yaw, waypoints):
+        closestWaypoint = self.closest_waypoint(position, waypoints)
+        map_x = waypoints[closestWaypoint].pose.pose.position.x
+        map_y = waypoints[closestWaypoint].pose.pose.position.y
+        heading = math.atan2((map_y - position.y), (map_x - position.x))
+        angle = abs(yaw - heading)
+        if (angle > math.pi/4):
+                  closestWaypoint += 1
+        return closestWaypoint 
 
     def get_waypoint_velocity(self, waypoint):
         return waypoint.twist.twist.linear.x
