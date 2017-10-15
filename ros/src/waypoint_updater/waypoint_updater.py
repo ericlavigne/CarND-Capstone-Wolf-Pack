@@ -24,7 +24,9 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish. You can change this number
-
+STOP = 1# Action for the ego car
+GO = 2# Action for the ego car
+SLOW = 3# Action for ego car
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -46,16 +48,20 @@ class WaypointUpdater(object):
         self.car_position = None
         self.car_orientation = None
         self.car_yaw = None
+        self.car_action = None
+        self.closestWaypoint = None
         self.waypoints = []
         self.final_waypoints = []
-        self.traffic_waypoint = None
+        self.tl_idx = None
         self.do_work()
 
     def do_work(self):
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None):
-                       self.generate_final_waypoints(self.car_position, self.car_yaw, self.waypoints)
+                       self.closestWaypoint = self.NextWaypoint(self.car_position, self.car_yaw, self.waypoints)
+                       self.car_action = self.desired_action(self.tl_idx, self.closestWaypoint, self.waypoints)
+                       self.generate_final_waypoints(self.closestWaypoint, self.waypoints, self.car_action, self.tl_idx)
                        self.publish()
                 else:
                        if self.car_position == None:
@@ -79,24 +85,51 @@ class WaypointUpdater(object):
         rospy.loginfo("Unregistered from /base_waypoints topic")
 
     def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        self.traffic_waypoint = msg.data
-        #rospy.logwarn(msg.data)
+        self.tl_idx = msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
         pass
 
-    def generate_final_waypoints(self, position, yaw, waypoints):
-        closestWaypoint = self.NextWaypoint(position, yaw, waypoints)
-        #closestWaypoint = self.closest_waypoint(position, waypoints)
-        #rospy.logwarn(closestWaypoint)
-        velocity = rospy.get_param('~/waypoint_loader/velocity', 40.0) * 0.44704
+    def desired_action(self, tl_index, closestWaypoint, waypoints):
+        dist = self.distance(waypoints, closestWaypoint, tl_index)
+        rospy.logwarn(closestWaypoint)
+        rospy.logwarn(tl_index)
+        if(tl_index != -1 and tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < 9.0 and dist > 0.1):
+           action = STOP
+           rospy.logwarn("STOP")
+           return action
+        elif(tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < 29.0):
+           action = SLOW
+           rospy.logwarn("SLOW")
+           return action
+        elif((dist > 29.0 and tl_index > closestWaypoint) or (tl_index != -1 and tl_index > closestWaypoint + LOOKAHEAD_WPS) or (tl_index + 5 < closestWaypoint and tl_index != -1) or (tl_index == -1)):
+           action = GO
+           rospy.logwarn("GO")
+           return action
+
+    def generate_final_waypoints(self, closestWaypoint, waypoints, action, tl_index):
+        velocity = rospy.get_param('~/waypoint_loader/velocity', 0.0) * 0.44704
         self.final_waypoints = []
         if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
-                for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
-                        self.set_waypoint_velocity(waypoints, idx, velocity)
-                        self.final_waypoints.append(waypoints[idx])
+                if (action == STOP):
+                        for idx in range(closestWaypoint, tl_index):
+                                 velocity = 0.0 
+                                 self.set_waypoint_velocity(waypoints, idx, velocity)
+                                 self.final_waypoints.append(waypoints[idx])
+                        for idx in range(tl_index, closestWaypoint + LOOKAHEAD_WPS):
+                                 velocity = 0.0
+                                 self.set_waypoint_velocity(waypoints, idx, velocity)
+                                 self.final_waypoints.append(waypoints[idx])
+                elif (action == GO or action == SLOW):
+                        velocity = 0.0
+                        for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
+                                 if action == GO:
+                                    velocity = 10 * 0.44704
+                                 elif action == SLOW:
+                                    velocity = 4 * 0.44704
+                                 self.set_waypoint_velocity(waypoints, idx, velocity)
+                                 self.final_waypoints.append(waypoints[idx])
         else:
                 for idx in range(closestWaypoint, len(waypoints)):
                         self.set_waypoint_velocity(waypoints, idx, velocity)
@@ -105,7 +138,7 @@ class WaypointUpdater(object):
     def publish(self):
         final_waypoints_msg = Lane()
         #final_waypoints_msg.header.frame_id = '/world'
-        #final_waypoints_msg.header.stamp = rospy.time(0)
+        #final_waypoints_msg.header.stamp = rospy.Time(0)
         final_waypoints_msg.waypoints = list(self.final_waypoints)
         #rospy.loginfo(final_waypoints_msg)
         self.final_waypoints_pub.publish(final_waypoints_msg)    
