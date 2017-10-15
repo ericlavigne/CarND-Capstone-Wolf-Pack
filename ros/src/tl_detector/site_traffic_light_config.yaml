@@ -5,3 +5,9 @@ camera_info:
   image_height: 600
 stop_line_positions:
     - [20.991, 22.837]
+tl:
+  tl_classification_model: 'models/tl_classifier_carla.h5'
+  tl_detection_model: 'models/tl_detector_carla.h5'
+  classifier_resize_height: 64
+  classifier_resize_width: 32
+  color_mode: 'rgb8'
