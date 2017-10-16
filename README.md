@@ -61,6 +61,9 @@ cd ros
 catkin_make
 source devel/setup.sh
 roslaunch launch/wolfpack.launch use_ground_truth:=true
+
+# running rqt_gui in a different terminal
+rqt --perspective-file "$(rospack find wolfpack_visualisation)/launch/rqt.perspective"
 ```
 
 
