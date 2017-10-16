@@ -184,6 +184,8 @@ class Bridge(object):
         self.server('steer', data={'steering_angle': str(data.steering_wheel_angle_cmd)})
 
     def callback_throttle(self, data):
+        # Logging inexplicably increases effect of throttle (speed and acceleration)
+        rospy.loginfo("throttle: %s", data)
         self.server('throttle', data={'throttle': str(data.pedal_cmd)})
 
     def callback_brake(self, data):

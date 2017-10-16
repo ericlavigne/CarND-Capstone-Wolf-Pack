@@ -6,7 +6,8 @@ from dbw_mkz_msgs.msg import ThrottleCmd, SteeringCmd, BrakeCmd, SteeringReport
 from geometry_msgs.msg import TwistStamped
 import math
 
-from twist_controller import Controller
+from twist_controller import TwistController
+from gain_controller import GainController
 
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
@@ -54,8 +55,9 @@ class DBWNode(object):
                                          BrakeCmd, queue_size=1)
         self.dbw_enabled = False
 
-        min_speed = 1.0
-        self.controller = Controller(wheel_base, steer_ratio, min_speed, max_lat_accel, max_steer_angle)
+        self.twist_controller = TwistController(max_steer_angle, accel_limit, decel_limit)
+        self.gain_controller = GainController(max_throttle=1.0, max_brake=1.0, max_steer_angle=max_steer_angle,
+                                              delay_seconds=1.0, steer_ratio=steer_ratio)
 
         self.goal_linear = [0,0]
         self.goal_yaw_rate = 0.
@@ -80,10 +82,22 @@ class DBWNode(object):
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
         while not rospy.is_shutdown():
-            throttle, brake, steering = self.controller.control(self.goal_linear,
-                                                                self.goal_yaw_rate,
-                                                                self.current_linear,
-                                                                self.dbw_enabled)
+            # TODO: Calculate these using pose topic and rospy.get_time()
+            linear_speed = 0.0
+            angular_velocity = 0.0
+            linear_acceleration = 0.0
+            angular_acceleration = 0.0
+            deltat = 0.02
+            
+            goal_linear_acceleration, goal_angular_velocity = self.twist_controller.control(self.goal_linear,
+                                                                                            self.goal_yaw_rate,
+                                                                                            self.current_linear,
+                                                                                            deltat,
+                                                                                            self.dbw_enabled)
+            throttle, brake, steering = self.gain_controller.control(goal_linear_acceleration, goal_angular_velocity,
+                                                                     linear_speed, angular_velocity,
+                                                                     linear_acceleration, angular_acceleration,
+                                                                     deltat, self.dbw_enabled)
             if self.dbw_enabled:
                 self.publish(throttle, brake, steering)
             rate.sleep()
@@ -91,7 +105,7 @@ class DBWNode(object):
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
         tcmd.enable = True
-        tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT
+        tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT # range [0,1]
         tcmd.pedal_cmd = throttle
         self.throttle_pub.publish(tcmd)
 
@@ -102,7 +116,7 @@ class DBWNode(object):
 
         bcmd = BrakeCmd()
         bcmd.enable = True
-        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
+        bcmd.pedal_cmd_type = BrakeCmd.CMD_PERCENT # range [0,1]
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 

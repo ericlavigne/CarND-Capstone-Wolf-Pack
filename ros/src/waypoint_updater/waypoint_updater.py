@@ -53,7 +53,10 @@ class WaypointUpdater(object):
                        self.generate_final_waypoints(self.car_position, self.waypoints)
                        self.publish()
                 else:
-                       rospy.logwarn("Message not received")       
+                       if self.car_position == None:
+                               rospy.logwarn("/current_pose not received")
+                       if self.waypoints == None:
+                               rospy.logwarn("/base_waypoints not received")
                 rate.sleep()
 
     def pose_cb(self, msg):
@@ -77,7 +80,7 @@ class WaypointUpdater(object):
     def generate_final_waypoints(self, position, waypoints):
         closestWaypoint = self.closest_waypoint(position, waypoints)
         #rospy.logwarn(closestWaypoint)
-        velocity = 4.4704 #10 mph in mps
+        velocity = rospy.get_param('~/waypoint_loader/velocity', 40.0) * 0.44704
         self.final_waypoints = []
         if ((closestWaypoint + LOOKAHEAD_WPS) < len(waypoints)):
                 for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
