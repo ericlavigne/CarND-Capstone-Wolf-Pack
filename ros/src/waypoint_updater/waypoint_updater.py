@@ -52,6 +52,7 @@ class WaypointUpdater(object):
         self.waypoints = []
         self.final_waypoints = []
         self.tl_idx = None
+        self.tl_state = None
         self.do_work()
 
     def do_work(self):
@@ -59,7 +60,7 @@ class WaypointUpdater(object):
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_idx != None):
                        self.closestWaypoint = self.NextWaypoint(self.car_position, self.car_yaw, self.waypoints)
-                       self.car_action = self.desired_action(self.tl_idx, self.closestWaypoint, self.waypoints)
+                       self.car_action = self.desired_action(self.tl_idx, self.tl_state, self.closestWaypoint, self.waypoints)
                        self.generate_final_waypoints(self.closestWaypoint, self.waypoints, self.car_action, self.tl_idx)
                        self.publish()
                 else:
@@ -86,25 +87,35 @@ class WaypointUpdater(object):
         rospy.loginfo("Unregistered from /base_waypoints topic")
 
     def traffic_cb(self, msg):
-        self.tl_idx = msg.data
+        if msg.data != -1:
+           self.tl_idx = msg.data
+           self.tl_state = "RED"
+        else:
+           self.tl_state = "GREEN"
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
         pass
 
-    def desired_action(self, tl_index, closestWaypoint, waypoints):
+    def desired_action(self, tl_index, tl_state, closestWaypoint, waypoints):
         dist = self.distance(waypoints, closestWaypoint, tl_index)
-        if(tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < DISTANCE_TO_STOP and dist > 0.1 and tl_index != -1):
+        rospy.logwarn(tl_index)
+        rospy.logwarn(tl_state)
+        rospy.logwarn(dist)
+        if(tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < DISTANCE_TO_STOP and dist > 0.1 and tl_state == "RED"):
            action = "STOP"
            self.prev_action = "STOP"
+           rospy.logwarn(action)
            return action
-        elif((tl_index - closestWaypoint < LOOKAHEAD_WPS and tl_index - closestWaypoint > 0 and dist < DISTANCE_TO_SLOW) or (self.prev_action == "SLOW" and tl_index == -1)):
+        elif(dist < DISTANCE_TO_SLOW and self.prev_action != "STOP"):
            action = "SLOW"
            self.prev_action = "SLOW"
+           rospy.logwarn(action)
            return action
-        elif((dist > DISTANCE_TO_SLOW and tl_index > closestWaypoint) or (tl_index != -1 and tl_index > closestWaypoint + LOOKAHEAD_WPS) or (tl_index + STOP_GO_HYST < closestWaypoint and tl_index != -1 and dist == 0) or (tl_index == -1 and self.prev_action != "SLOW")):
+        elif((dist > DISTANCE_TO_SLOW and tl_index > closestWaypoint) or (tl_state == "RED" and tl_index > closestWaypoint + LOOKAHEAD_WPS) or (tl_state == "GREEN" and self.prev_action != "SLOW") or (dist == 99999 and tl_index + STOP_GO_HYST < closestWaypoint)):
            action = "GO"
            self.prev_action = "GO"
+           rospy.logwarn(action)
            return action
 
     def generate_final_waypoints(self, closestWaypoint, waypoints, action, tl_index):
@@ -129,7 +140,8 @@ class WaypointUpdater(object):
                 for idx in range(closestWaypoint, len(waypoints)):
                         self.set_waypoint_velocity(waypoints, idx, velocity)
                         self.final_waypoints.append(waypoints[idx])
-    
+    			# TODO check for "SLOW", "GO" and "STOP"
+
     def publish(self):
         final_waypoints_msg = Lane()
         #final_waypoints_msg.header.frame_id = '/world'
@@ -172,10 +184,13 @@ class WaypointUpdater(object):
 
     def distance(self, waypoints, wp1, wp2):
         dist = 0
-        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
-        for i in range(wp1, wp2+1):
-            dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
-            wp1 = i
+        if wp2 >= wp1:
+           dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
+           for i in range(wp1, wp2+1):
+               dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
+               wp1 = i
+        else:
+           dist = 99999
         return dist
 
     def distance_any(self, x1, y1, x2, y2):
