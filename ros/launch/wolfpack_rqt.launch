@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Use Styx Launch -->
+    <include file="launch/styx.launch" />
+
+    <!-- visualization -->
+    <include file="$(find wolfpack_visualisation)/launch/visualisation_rqt.launch" />
+
+</launch>
