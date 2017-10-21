@@ -12,3 +12,9 @@ stop_line_positions:
     - [821.96, 2905.8]
     - [161.76, 2303.82]
     - [351.84, 1574.65]
+tl:
+  tl_classification_model: 'models/tl_classifier_simulator.h5'
+  tl_detection_model: 'models/tl_detector_simulator.h5'
+  classifier_resize_height: 64
+  classifier_resize_width: 32
+  color_mode: 'rgb8'
