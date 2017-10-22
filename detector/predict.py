@@ -11,7 +11,7 @@ from model import preprocess, get_unet
 
 miss = 100
 
-def predict(folder_name):
+def predict(folder_name, mode):
     print_heading('Loading and preprocessing data...')
 
     image_rows = 600
@@ -43,8 +43,8 @@ def predict(folder_name):
 
     print_heading('Loading saved weights...')
 
-    model = get_unet(folder_name)
-    model.load_weights('tl_weights.h5')
+    model = get_unet(mode)
+    model.load_weights(os.path.join(mode, 'tl_weights.h5'))
 
     print_heading('Predicting masks on test data...')
 

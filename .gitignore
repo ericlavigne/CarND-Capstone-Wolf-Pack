@@ -10,3 +10,4 @@ detector/*.npy
 detector/preds/*
 detector/carla/*.npy
 detector/sim/*.npy
+/.vs/*
