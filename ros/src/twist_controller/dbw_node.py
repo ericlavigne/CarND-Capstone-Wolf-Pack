@@ -65,9 +65,14 @@ class DBWNode(object):
         self.gain_controller = GainController(max_throttle=1.0, max_brake=1.0, max_steer_angle=max_steer_angle,
                                               delay_seconds=1.0, steer_ratio=steer_ratio)
 
-        self.goal_linear = [0,0]
+        self.goal_velocity = [0,0]
         self.goal_yaw_rate = 0.
-        self.current_linear = [0,0]
+        
+        self.current_time = None
+        self.current_velocity = [0,0]
+        self.current_yaw_rate = 0
+        self.current_speed = 0
+        self.current_linear_acceleration = 0
 
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cmd_callback)
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_callback)
@@ -86,50 +91,64 @@ class DBWNode(object):
 
     def twist_cmd_callback(self, msg):
         goal_x = msg.twist.linear.x
-        if (goal_x == 0 or self.goal_linear[0] == 0) and (goal_x != self.goal_linear[0]): #reset the damn thing since we need to hard stop
+        if (goal_x == 0 or self.goal_velocity[0] == 0) and (goal_x != self.goal_velocity[0]): #reset the damn thing since we need to hard stop
             self.twist_controller.reset_throttle_pid()
 
-        self.goal_linear = [msg.twist.linear.x, msg.twist.linear.y]
+        self.goal_velocity = [msg.twist.linear.x, msg.twist.linear.y]
         self.goal_yaw_rate = msg.twist.angular.z
 
     def current_velocity_callback(self, msg):
-        self.current_linear = [msg.twist.linear.x, msg.twist.linear.y]
+        old_time = self.current_time
+        old_speed = self.current_speed
+        
+        new_time = rospy.get_time()
+        new_velocity = [msg.twist.linear.x, msg.twist.linear.y]
+        new_yaw_rate = msg.twist.angular.z
+        new_speed = math.sqrt(new_velocity[0] * new_velocity[0] + new_velocity[1] * new_velocity[1])
+        
+        if old_time is not None:
+            deltat = new_time - old_time
+            self.current_linear_acceleration = (new_speed - old_speed) * 1.0 / max(deltat,0.005)
+        
+        self.current_velocity = new_velocity
+        self.current_yaw_rate = new_yaw_rate
+        self.current_speed = new_speed
+        self.current_time = new_time
 
     def dbw_enabled_callback(self, msg):
         self.dbw_enabled = msg.data
 
     def loop(self):
-        rate = rospy.Rate(50) # 50Hz
+    
+        rate_hertz = 50
+        rate = rospy.Rate(rate_hertz)
+        deltat = 1.0 / rate_hertz
         while not rospy.is_shutdown():
-            # TODO: Calculate these using pose topic and rospy.get_time()
-            linear_speed = 0.0
-            angular_velocity = 0.0
-            linear_acceleration = 0.0
-            angular_acceleration = 0.0
-            deltat = 0.02
 
-            goal_linear_acceleration, goal_angular_velocity = self.twist_controller.control(self.goal_linear,
-                                                                                            self.goal_yaw_rate,
-                                                                                            self.current_linear,
-                                                                                            deltat,
-                                                                                            self.dbw_enabled)
+            control_linear_acceleration, control_yaw_rate = self.twist_controller.control(self.goal_velocity,
+                                                                                          self.goal_yaw_rate,
+                                                                                          self.current_velocity,
+                                                                                          deltat,
+                                                                                          self.dbw_enabled)
 
-            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f", self.current_linear[0],
-            #               self.goal_linear[0], goal_linear_acceleration)
+            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f", self.current_velocity[0],
+            #               self.goal_velocity[0], control_linear_acceleration)
 
-            if(self.goal_linear[0] != 0 and goal_linear_acceleration < 0 and goal_linear_acceleration > -self.brake_deadband):
+            if(self.goal_velocity[0] != 0 and control_linear_acceleration < 0 and control_linear_acceleration > -self.brake_deadband):
                 goal_linear_acceleration = 0
 
-            throttle, brake, steering = self.gain_controller.control(goal_linear_acceleration, goal_angular_velocity,
-                                                                     linear_speed, angular_velocity,
-                                                                     linear_acceleration, angular_acceleration,
+            throttle, brake, steering = self.gain_controller.control(control_linear_acceleration,
+                                                                     control_yaw_rate,
+                                                                     self.current_speed,
+                                                                     self.current_linear_acceleration,
+                                                                     self.current_yaw_rate,
                                                                      deltat, self.dbw_enabled)
 
             if brake > 0:
                 brake = brake * BrakeCmd.TORQUE_MAX / -self.decel_limit
 
-            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f, b:%.2f", self.current_linear[0],
-            #               self.goal_linear[0], goal_linear_acceleration, brake)
+            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f, b:%.2f", self.current_velocity[0],
+            #               self.goal_velocity[0], control_linear_acceleration, brake)
 
             if self.dbw_enabled:
                 self.publish(throttle, brake, steering)
