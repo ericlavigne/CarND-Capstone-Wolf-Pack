@@ -34,14 +34,16 @@ def predict(folder_name):
 
     imgs = preprocess(imgs).astype('float32')
 
-    mean = np.mean(imgs)  # mean for data centering
-    std = np.std(imgs)  # std for data normalization
-    imgs -= mean
-    imgs /= std
+    if mode == "carla":
+        mean = np.mean(imgs)  # mean for data centering
+        std = np.std(imgs)  # std for data normalization
+    
+        imgs -= mean
+        imgs /= std
 
     print_heading('Loading saved weights...')
 
-    model = get_unet()
+    model = get_unet(folder_name)
     model.load_weights('tl_weights.h5')
 
     print_heading('Predicting masks on test data...')
@@ -64,6 +66,11 @@ if __name__ == '__main__':
         type=str,
         help='Path folder with images to predict'
     )
+    parser.add_argument(
+        'mode', # carla or sim
+        type=str,
+        help='Path folder with images to predict'
+    )
     args = parser.parse_args()
 
-    predict(args.folder)
+    predict(args.folder, args.mode)

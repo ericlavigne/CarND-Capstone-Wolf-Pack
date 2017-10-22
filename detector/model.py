@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 from skimage.transform import resize
 from skimage.color import rgb2grey
@@ -23,7 +24,7 @@ def dice_coef(y_true, y_pred):
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
 
-def get_unet():
+def get_unet(parent_folder):
     inputs = Input((img_rows, img_cols, 1))
     conv1 = Conv2D(32, (3, 3), activation='relu', padding='same', trainable=True)(inputs)
     conv1 = Conv2D(32, (3, 3), activation='relu', padding='same', name='conv_1_2', trainable=True)(conv1)
@@ -64,7 +65,7 @@ def get_unet():
 
     model = Model(inputs=[inputs], outputs=[conv10])
 
-    model.load_weights('weights.h5', by_name=True)
+    model.load_weights(os.path.join(parent_folder, 'tl_weights.h5'), by_name=True)
 
     model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
 
