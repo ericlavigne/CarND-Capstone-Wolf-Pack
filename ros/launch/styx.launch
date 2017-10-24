@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="use_ground_truth" default="false" />
+
     <!-- Simulator Bridge -->
     <include file="$(find styx)/launch/server.launch" />
 
@@ -16,7 +18,9 @@
     <include file="$(find waypoint_updater)/launch/waypoint_updater.launch"/>
 
     <!--Traffic Light Detector Node -->
-    <include file="$(find tl_detector)/launch/tl_detector.launch" pass_all_args="true"/>
+    <include file="$(find tl_detector)/launch/tl_detector.launch">
+        <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
+    </include>
 
     <!--Traffic Light Locations and Camera Config -->
     <param name="traffic_light_config" textfile="$(find tl_detector)/sim_traffic_light_config.yaml" />

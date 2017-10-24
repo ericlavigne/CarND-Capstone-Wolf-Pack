@@ -1,7 +1,11 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="use_ground_truth" default="false" />
+
     <!-- Use Styx Launch -->
-    <include file="launch/styx.launch" />
+    <include file="launch/styx.launch">
+        <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
+    </include>
 
     <!-- visualization -->
     <include file="$(find wolfpack_visualisation)/launch/visualisation_rqt.launch" />

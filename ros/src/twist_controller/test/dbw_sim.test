@@ -13,4 +13,5 @@
         <param name="max_steer_angle" value="8." />
     </node>
     <test pkg="twist_controller" type="test_dbw.py" test-name="test_dbw"/>
+    <test pkg="twist_controller" type="test_stability_controller.py" test-name="test_stability_controller"/>
 </launch>
