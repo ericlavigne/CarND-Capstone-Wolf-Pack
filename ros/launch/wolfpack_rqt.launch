@@ -4,6 +4,6 @@
     <include file="launch/styx.launch" />
 
     <!-- visualization -->
-    <include file="$(find wolfpack_visualisation)/launch/visualisation.launch" />
+    <include file="$(find wolfpack_visualisation)/launch/visualisation_rqt.launch" />
 
 </launch>
