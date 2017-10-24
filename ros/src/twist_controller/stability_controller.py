@@ -1,4 +1,4 @@
-import rospy
+# import rospy
 from math import atan2, pi, sqrt
 from pid import PID
 
@@ -28,7 +28,7 @@ class TwistController(object):
         self.throttle_pid = PID(throttle_kp,
                                 throttle_ki,
                                 throttle_kd,
-                                0. - decel_limit,
+                                decel_limit,
                                 accel_limit)
 
     def control(self, goal_velocity, goal_angular_velocity, current_velocity, deltat, dbw_enabled):
@@ -45,6 +45,6 @@ class TwistController(object):
         
         #rospy.logwarn("twist_controller | speed_diff: %s   acceleration: %s   goal_angular: %s   angular: %s",
         #      speed_diff, acceleration, goal_angular_velocity, angular_velocity)
-        
+
         return acceleration, angular_velocity
 
