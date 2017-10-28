@@ -1,13 +1,13 @@
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
 
-### Installation 
+### Installation
 
-* Be sure that your workstation is running Ubuntu 16.04 Xenial Xerus or Ubuntu 14.04 Trusty Tahir. [Ubuntu downloads can be found here](https://www.ubuntu.com/download/desktop). 
+* Be sure that your workstation is running Ubuntu 16.04 Xenial Xerus or Ubuntu 14.04 Trusty Tahir. [Ubuntu downloads can be found here](https://www.ubuntu.com/download/desktop).
 * If using a Virtual Machine to install Ubuntu, use the following configuration as minimum:
   * 2 CPU
   * 2 GB system memory
   * 25 GB of free hard drive space
-  
+
   The Udacity provided virtual machine has ROS and Dataspeed DBW already installed, so you can skip the next two steps if you are using this.
 
 * Follow these instructions to install ROS
@@ -70,9 +70,14 @@ rqt --perspective-file "$(rospack find wolfpack_visualisation)/launch/rqt.perspe
 ### Unit Testing
 To run a single unit test with all the rosout logging in the console
 ```bash
-# from ros dir
+# rostest from ros dir
 rostest --text src/waypoint_updater/test/waypoint_updater.test
+
+# nosetest from ros dir
+nosetests -s src/twist_controller/test/test_stability_controller.py
 ```
+
+
 
 To run all ROS unit tests
 ```bash
@@ -88,11 +93,14 @@ uncomment the inotify command and comment out the existing inotify command
 # from ros dir watch src dir and run single test
 ./watch-run.sh src "rostest --text src/waypoint_updater/test/waypoint_updater.test"
 
+# from ros dir watch src dir and run nosetest
+./watch-run.sh src "nosetests -s src/twist_controller/test/test_stability_controller.py"
+
 # from ros dir watch src dir and run all unit tests
 ./watch-run.sh src "catkin_make run_tests"
 ```
 
-##### Adding tests to new package
+##### Adding ros node tests to new package
 read http://wiki.ros.org/rostest/Writing
 1. Create a ROS test file
 e.g. ros/src/waypoint_updater/test/test_waypoint_updater.py
@@ -117,4 +125,12 @@ endif()
 4. Add the below to the package.xml
 ```
   <build_depend>rostest</build_depend>
+```
+
+##### Adding ros nosetests to new package
+1. Create plain Python unit test file
+2. Add to CmakeLists.txt in the Testing section
+```
+## Add folders to be run by python nosetests
+  catkin_add_nosetests(test/test_stability_controller.py)
 ```
