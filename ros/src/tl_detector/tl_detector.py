@@ -58,7 +58,7 @@ class TLDetector(object):
 
         #Detector setup
         self.detector_model = load_model(self.config['tl']['tl_detection_model'], custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef })
-	self.detector_model._make_predict_function()
+        self.detector_model._make_predict_function()
         self.resize_width = self.config['tl']['detector_resize_width']
         self.resize_height = self.config['tl']['detector_resize_height']
         
