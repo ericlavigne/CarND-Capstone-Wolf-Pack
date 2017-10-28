@@ -203,7 +203,7 @@ class TLDetector(object):
 
     def detect_traffic_light(self, cv_image):
         resize_image = cv2.cvtColor(cv2.resize(cv_image, (self.resize_width, self.resize_height)), cv2.COLOR_RGB2GRAY)
-	resize_image = resize_image[..., np.newaxis]
+        resize_image = resize_image[..., np.newaxis]
         if self.is_carla:
             mean = np.mean(resize_image) # mean for data centering
             std = np.std(resize_image) # std for data normalization
