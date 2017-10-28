@@ -26,7 +26,7 @@ def get_total_images(data_path):
     return total
 
 def get_image_and_mask(image_name):
-    image_mask_path = image_name.split('.')[0] + '_mask.tif'
+    image_mask_path = image_name.split('.')[0] + '_mask.jpg'
     img = imread(image_name)
     img_mask = np.array([])
     if os.path.exists(image_mask_path):
@@ -55,7 +55,7 @@ def create_train_data(folder, use_basic_augmentation):
     train_data_path = os.path.join(folder, data_folder, 'train')
 
     increment = 2 if use_basic_augmentation else 4
-    total = get_total_images(train_data_path)*increment
+    total = get_total_images(train_data_path)*increment//2
 
     imgs = np.ndarray((total, image_rows, image_cols, 3), dtype=np.uint8)
     imgs_mask = np.ndarray((total, image_rows, image_cols, 3), dtype=np.uint8)

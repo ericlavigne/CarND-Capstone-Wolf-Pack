@@ -10,8 +10,8 @@ from keras.optimizers import Adam
 from keras import backend as K
 
 
-img_rows = 320
-img_cols = 416
+img_rows = 96
+img_cols = 128
 
 smooth = 1.
 
@@ -65,7 +65,7 @@ def get_unet(parent_folder):
 
     model = Model(inputs=[inputs], outputs=[conv10])
 
-    model.load_weights(os.path.join(parent_folder, 'tl_weights.h5'), by_name=True)
+    model.load_weights(os.path.join(parent_folder, 'weights.h5'), by_name=True)
 
     model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
 

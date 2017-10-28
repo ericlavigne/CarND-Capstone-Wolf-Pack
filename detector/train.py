@@ -36,11 +36,11 @@ def train_and_predict(parent_folder):
 
     model = get_unet(parent_folder)
     
-    model_checkpoint = ModelCheckpoint(os.path.join(parent_folder, 'tl_weights.h5'), monitor='val_loss', save_best_only=True)
+    model_checkpoint = ModelCheckpoint('tl_weights.h5', monitor='val_loss', save_best_only=True)
 
     print_heading('Fitting model...')
 
-    model.fit(imgs_train, imgs_mask_train, batch_size=8, epochs=30, verbose=1, shuffle=True,
+    model.fit(imgs_train, imgs_mask_train, batch_size=16, epochs=30, verbose=1, shuffle=True,
               validation_split=0.2,
               callbacks=[model_checkpoint])
 
@@ -59,7 +59,7 @@ def train_and_predict(parent_folder):
 
     print_heading('Loading saved weights...')
 
-    model.load_weights(os.path.join(parent_folder, 'tl_weights.h5'))
+    model.load_weights('tl_weights.h5')
 
     print_heading('Predicting masks on test data...')
 
