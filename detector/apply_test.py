@@ -25,16 +25,12 @@ def preprocess(img):
     return resize(img, (img_rows, img_cols), preserve_range=True, mode="constant").astype('float32') / 255;
 
 def extract_image(pred_image_mask, image):
-
-    if not (np.any(pred_image_mask[:,:] > 220)):
-        return None
-
     column_projection = np.sum(pred_image_mask, axis = 0)
 
-    if (np.max(column_projection) < 50*50):
+    if (np.max(column_projection) < 20*20):
         return None
 
-    non_zero_column_index = np.argwhere(column_projection > 50*50)
+    non_zero_column_index = np.argwhere(column_projection > 20*20)
 
     if non_zero_column_index.size == 0:
         return None
@@ -61,15 +57,15 @@ def apply_mask(mode):
 
     print_heading('Apply mask to test images ...')
 
-    pred_dir = os.path.join('preds')
-    imgs_test, imgs_id_test = load_test_data(os.path.join(mode))
+    pred_dir = os.path.join(root_path, 'preds')
+    imgs_test, imgs_id_test = load_test_data(os.path.join(root_path, mode))
 
     for image, image_id in zip(imgs_test, imgs_id_test):
         pred_image_name = os.path.join(pred_dir, str(image_id) + '.pred.png')
         pred_image_mask = imread(pred_image_name)
 
         extracted = extract_image(pred_image_mask, image)
-        if extracted == None:
+        if extracted is None:
             print("miss", image_id)
         else:
             imsave(os.path.join(pred_dir, image_id + '.result.jpg'), extracted)
@@ -91,8 +87,8 @@ def apply_mask_custom(folder):
         pred_image_mask = imread(pred_image_name)
 
         extracted = extract_image(pred_image_mask, image)
-        if extracted == None:
-            print("miss", image_id)
+        if extracted is None:
+            print("miss", image_name)
         else:
             imsave(os.path.join(pred_dir, image_name.split('.')[0] + '.result.jpg'), extracted)
 

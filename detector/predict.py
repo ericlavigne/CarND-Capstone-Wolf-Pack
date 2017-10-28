@@ -19,7 +19,7 @@ def predict(folder_name, mode):
     folder_pattern = os.path.join(folder_name, '*.jpg')
     image_list = glob.glob(folder_pattern)
 
-    total = int(len(image_list)/miss) + 1 if miss > 0 else len(image_list)
+    total = int(len(image_list)/miss) if miss > 0 else len(image_list)
     imgs = np.ndarray((total, image_rows, image_cols, 3), dtype=np.uint8)
     imgs_id = np.ndarray((total,), dtype=object)
 
