@@ -10,8 +10,6 @@ from stability_controller import TwistController
 from gain_controller import GainController
 
 
-import sys, twist_controller
-
 from dynamic_reconfigure.server import Server
 from twist_controller.cfg import PIDParamsConfig
 
@@ -78,8 +76,10 @@ class DBWNode(object):
         self.loop()
 
     def config_callback(self, config, level):
-        rospy.logwarn("""Reconfigure Request: {int_param}, {double_param},\ 
-              {str_param}, {bool_param}, {size}""".format(**config))
+        rospy.logwarn("Updating Steering PID %s, %s, %s", config["Steer_P"], config["Steer_I"], config["Steer_D"])
+        rospy.logwarn("Updating Throttle PID %s, %s, %s", config["Throttle_P"], config["Throttle_I"], config["Throttle_D"])
+        self.twist_controller.update_steer_pid(config["Steer_P"], config["Steer_I"], config["Steer_D"])
+        self.twist_controller.update_throttle_pid(config["Throttle_P"], config["Throttle_I"], config["Throttle_D"])
         return config
 
     def twist_cmd_callback(self, msg):

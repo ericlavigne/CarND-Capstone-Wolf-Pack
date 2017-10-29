@@ -48,3 +48,8 @@ class TwistController(object):
 
         return acceleration, angular_velocity
 
+    def update_steer_pid(self, p, i, d):
+        self.steer_pid.update_gains(p, i, d)
+
+    def update_throttle_pid(self, p, i, d):
+        self.throttle_pid.update_gains(p, i, d)

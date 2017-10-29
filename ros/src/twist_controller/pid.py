@@ -35,3 +35,18 @@ class PID(object):
         self.last_error = error
 
         return val
+
+    def update_gains(self, p, i, d):
+        update = False
+        if self.kp != p:
+            self.kp = p
+            update=True
+        if self.ki != i:
+            self.ki = i
+            update=True
+        if self.kd != d:
+            self.kd = d
+            update=True
+
+        if update:
+            self.reset()
