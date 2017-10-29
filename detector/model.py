@@ -66,6 +66,7 @@ def get_unet(parent_folder):
     model = Model(inputs=[inputs], outputs=[conv10])
 
     model.load_weights(os.path.join(parent_folder, 'weights.h5'), by_name=True)
+    #model.load_weights('tl_weights.h5', by_name=True)
 
     model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
 
