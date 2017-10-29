@@ -63,7 +63,7 @@ class DBWNode(object):
 
         self.twist_controller = TwistController(max_steer_angle, accel_limit, decel_limit)
         self.gain_controller = GainController(max_throttle=1.0, max_brake=1.0, max_steer_angle=max_steer_angle,
-                                              delay_seconds=1.0, steer_ratio=steer_ratio)
+                                              steer_ratio=steer_ratio)
 
         self.goal_velocity = [0,0]
         self.goal_yaw_rate = 0.
@@ -98,17 +98,33 @@ class DBWNode(object):
         self.goal_yaw_rate = msg.twist.angular.z
 
     def current_velocity_callback(self, msg):
+    
+        #rospy.logwarn("velocity message: %s", msg)
+    
         old_time = self.current_time
         old_speed = self.current_speed
+        old_yaw_rate = self.current_yaw_rate
         
         new_time = rospy.get_time()
+        
         new_velocity = [msg.twist.linear.x, msg.twist.linear.y]
         new_yaw_rate = msg.twist.angular.z
         new_speed = math.sqrt(new_velocity[0] * new_velocity[0] + new_velocity[1] * new_velocity[1])
         
         if old_time is not None:
             deltat = new_time - old_time
-            self.current_linear_acceleration = (new_speed - old_speed) * 1.0 / max(deltat,0.005)
+            weight = min(1.0, max(deltat,0.005) / 0.2)
+            
+            measured_acceleration = (new_speed - old_speed) * 1.0 / max(deltat,0.005)
+            self.current_linear_acceleration = weight * measured_acceleration \
+                                               + (1-weight) * self.current_linear_acceleration
+            
+            new_yaw_rate = weight * new_yaw_rate + (1 - weight) * old_yaw_rate
+            #if new_speed > old_speed:
+                #rospy.logwarn("acceleration: %s     new_speed: %s     old_speed: %s     dt: %s",
+                #              self.current_linear_acceleration, new_speed, old_speed, deltat)
+        
+        #rospy.logwarn("yaw rate: %s", new_yaw_rate)
         
         self.current_velocity = new_velocity
         self.current_yaw_rate = new_yaw_rate
@@ -142,7 +158,7 @@ class DBWNode(object):
                                                                      self.current_speed,
                                                                      self.current_linear_acceleration,
                                                                      self.current_yaw_rate,
-                                                                     deltat, self.dbw_enabled)
+                                                                     self.dbw_enabled)
 
             if brake > 0:
                 brake = brake * BrakeCmd.TORQUE_MAX / -self.decel_limit
