@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="use_ground_truth" default="false" />
+    <arg name="velocity" default="64" />
 
     <!-- Simulator Bridge -->
     <include file="$(find styx)/launch/server.launch" />
@@ -9,7 +10,9 @@
     <include file="$(find twist_controller)/launch/dbw_sim.launch"/>
 
     <!--Waypoint Loader -->
-    <include file="$(find waypoint_loader)/launch/waypoint_loader.launch"/>
+    <include file="$(find waypoint_loader)/launch/waypoint_loader.launch">
+        <arg name="velocity" value="$(arg velocity)"/>
+    </include>
 
     <!--Waypoint Follower Node -->
     <include file="$(find waypoint_follower)/launch/pure_pursuit.launch"/>
