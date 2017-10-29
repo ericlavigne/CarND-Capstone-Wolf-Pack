@@ -1,10 +1,12 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="use_ground_truth" default="false" />
+    <arg name="camera_image_throttle" default="30" />
 
     <!-- Use Styx Launch -->
     <include file="launch/styx.launch">
         <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
+        <arg name="camera_image_throttle" value="$(arg camera_image_throttle)"/>
     </include>
 
     <!-- visualization -->

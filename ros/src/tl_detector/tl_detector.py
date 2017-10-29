@@ -82,7 +82,7 @@ class TLDetector(object):
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
 
         if not self.use_ground_truth:
-            sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
+            sub6 = rospy.Subscriber('/image_color_throttled', Image, self.image_cb)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
@@ -115,21 +115,26 @@ class TLDetector(object):
         """
         self.has_image = True
         self.camera_image = msg
+        self.do_work()
 
-        light_wp, state = self.process_traffic_lights()
+    def do_work(self):
+        light_wp, newest_state = self.process_traffic_lights()
+        self.publish_tl_state(light_wp, newest_state)
+        self.has_image = False
 
+    def publish_tl_state(self, newest_light_wp, newest_state):
         '''
         Publish upcoming red lights at camera frequency.
         Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
         of times till we start using it. Otherwise the previous stable state is
         used.
         '''
-        if self.state != state:
+        if self.state != newest_state:
             self.state_count = 0
-            self.state = state
+            self.state = newest_state
         elif self.state_count >= STATE_COUNT_THRESHOLD:
             self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
+            light_wp = newest_light_wp if newest_state == TrafficLight.RED else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:

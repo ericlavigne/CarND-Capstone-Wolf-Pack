@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="use_ground_truth" default="false" />
+    <arg name="camera_image_throttle" default="30" />
 
     <!-- Simulator Bridge -->
     <include file="$(find styx)/launch/server.launch" />
@@ -20,6 +21,7 @@
     <!--Traffic Light Detector Node -->
     <include file="$(find tl_detector)/launch/tl_detector.launch">
         <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
+        <arg name="camera_image_throttle" value="$(arg camera_image_throttle)"/>
     </include>
 
     <!--Traffic Light Locations and Camera Config -->
