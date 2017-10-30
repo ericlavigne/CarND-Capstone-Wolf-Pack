@@ -9,6 +9,10 @@ import math
 from stability_controller import TwistController
 from gain_controller import GainController
 
+
+from dynamic_reconfigure.server import Server
+from twist_controller.cfg import PIDParamsConfig
+
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
 
@@ -67,7 +71,16 @@ class DBWNode(object):
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_callback)
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_callback)
 
+        srv = Server(PIDParamsConfig, self.config_callback)
+
         self.loop()
+
+    def config_callback(self, config, level):
+        rospy.logwarn("Updating Steering PID %s, %s, %s", config["Steer_P"], config["Steer_I"], config["Steer_D"])
+        rospy.logwarn("Updating Throttle PID %s, %s, %s", config["Throttle_P"], config["Throttle_I"], config["Throttle_D"])
+        self.twist_controller.update_steer_pid(config["Steer_P"], config["Steer_I"], config["Steer_D"])
+        self.twist_controller.update_throttle_pid(config["Throttle_P"], config["Throttle_I"], config["Throttle_D"])
+        return config
 
     def twist_cmd_callback(self, msg):
         self.goal_linear = [msg.twist.linear.x, msg.twist.linear.y]
