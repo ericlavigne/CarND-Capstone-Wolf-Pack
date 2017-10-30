@@ -64,7 +64,7 @@ class WaypointUpdater(object):
         self.do_work()
 
     def do_work(self):
-        rate = rospy.Rate(1)
+        rate = rospy.Rate(30)
         while not rospy.is_shutdown():
                 self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 64.0))
                 self.unsafe_speed = UNSAFE_VEL_FACTOR * self.cruise_speed

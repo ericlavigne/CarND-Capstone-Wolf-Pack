@@ -111,6 +111,12 @@ class DBWNode(object):
                                                                      linear_speed, angular_velocity,
                                                                      linear_acceleration, angular_acceleration,
                                                                      deltat, self.dbw_enabled)
+            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f, b:%.2f", self.current_linear[0],
+            #               self.goal_linear[0], goal_linear_acceleration, brake)
+
+            if brake > 0:
+                brake = brake * BrakeCmd.TORQUE_MAX / 5
+
             if self.dbw_enabled:
                 self.publish(throttle, brake, steering)
             rate.sleep()
@@ -129,7 +135,7 @@ class DBWNode(object):
 
         bcmd = BrakeCmd()
         bcmd.enable = True
-        bcmd.pedal_cmd_type = BrakeCmd.CMD_PERCENT # range [0,1]
+        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE # range [0,1]
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 
