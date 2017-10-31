@@ -1,10 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <node pkg="rviz" type="rviz" name="rviz"
-        args="-d $(find wolfpack_visualisation)/launch/wolfpack.rviz"/>
-
     <node pkg="wolfpack_visualisation" type="visualise.py" name="visualise" />
-
 
     <!-- Load RQT with a pre-setup perspective-->
     <node name="wolfpack_rqt" pkg="rqt_gui" type="rqt_gui" respawn="false"
