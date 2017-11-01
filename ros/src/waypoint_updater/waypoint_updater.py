@@ -24,8 +24,9 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish. You can change this number
-STOP_DISTANCE = 1.5 # Distance in 'm' from TL stop line where car should halt
+STOP_DISTANCE = 3.0# Distance in 'm' from TL stop line where car should halt
 SAFE_DECEL_FACTOR = 0.2
+UNSAFE_VEL_FACTOR = 0.9
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -49,6 +50,7 @@ class WaypointUpdater(object):
         self.car_curr_vel = None
         self.slow_decel = None
         self.cruise_speed = None
+        self.unsafe_speed = None
         self.unsafe_distance = None
         self.car_action = None
         self.prev_action = None
@@ -61,13 +63,13 @@ class WaypointUpdater(object):
         self.do_work()
 
     def do_work(self):
-        rate = rospy.Rate(30)
+        rate = rospy.Rate(17)
         # ROS parameters
-        self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 64.0))
+        self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 40.0))
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
         self.accel_limit = rospy.get_param('~/twist_controller/accel_limit', 1)
         self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit)
-
+        self.unsafe_speed = self.cruise_speed * UNSAFE_VEL_FACTOR
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_state != None and self.car_curr_vel != None):
                        self.safe_distance = (self.car_curr_vel ** 2)/(2 * self.decel_limit * SAFE_DECEL_FACTOR)
@@ -117,13 +119,21 @@ class WaypointUpdater(object):
         pass
 
     def check_stop(self, tl_index, tl_state, closestWaypoint, dist):
-        return tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and tl_state == "RED"
+        stop1 = (tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and tl_state == "RED") 
+        stop2 = (tl_index == closestWaypoint and dist < STOP_DISTANCE and tl_state == "RED")
+        return  stop1 or stop2 
 
     def check_slow(self, tl_state, dist):
-        return (dist < self.safe_distance and dist > self.unsafe_distance) or (dist > STOP_DISTANCE and dist < self.unsafe_distance and tl_state == "RED" and self.safe_distance > 0.1)
+        slow1 = (dist < self.safe_distance and dist > self.unsafe_distance)
+        slow2 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and tl_state == "RED" and self.safe_distance > 0.1)
+        return  slow1 or slow2 
 
     def check_go(self, tl_index, tl_state, closestWaypoint, dist):
-        return (dist > self.safe_distance and tl_index > closestWaypoint) or (dist > self.safe_distance and tl_index > closestWaypoint + LOOKAHEAD_WPS) or (tl_state == "GREEN" and dist < self.unsafe_distance) or (tl_index < closestWaypoint) or (tl_state == "GREEN" and self.prev_action == "STOP")
+        go1 = (dist > self.safe_distance and tl_index > closestWaypoint)
+        go2 = (dist > self.safe_distance and tl_index > closestWaypoint + LOOKAHEAD_WPS)
+        go3 = (tl_state == "GREEN" and dist < self.unsafe_distance) or (tl_index < closestWaypoint)
+        go4 = (tl_state == "GREEN" and self.prev_action == "STOP")
+        return  go1 or go2 or go3 or go4
 
     def desired_action(self, tl_index, tl_state, closestWaypoint, waypoints): 
         if tl_index != None:
@@ -176,6 +186,11 @@ class WaypointUpdater(object):
     def slow_waypoints(self, closestWaypoint, tl_index, waypoints):
         if(self.init_slow == False):
             dist_to_TL = self.distance(waypoints, closestWaypoint, tl_index)
+            #x1 = self.car_position.x
+            #y1 = self.car_position.y
+            #x2 = waypoints[tl_index].pose.pose.position.x
+            #y2 = waypoints[tl_index].pose.pose.position.y
+            #dist_to_TL = self.distance_any(x1, y1, x2, y2)
             self.slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
             if self.slow_decel > self.decel_limit:
                self.slow_decel = self.decel_limit
@@ -185,6 +200,11 @@ class WaypointUpdater(object):
             dist = self.distance(waypoints, idx, tl_index)
             if (idx < tl_index):
                 velocity = math.sqrt(2*self.slow_decel*dist)
+                if (dist < self.unsafe_distance and self.car_curr_vel > self.unsafe_speed):
+                   vel2 = self.car_curr_vel ** 2 - 2*self.decel_limit*dist
+                   if vel2 < 0.1:
+                      vel2 = 0.0
+                   velocity = math.sqrt(vel2)
                 #rospy.loginfo("Waypoint: %d, Dist to TL: %f, Velocity: %f, Current vel: %f",idx, dist, velocity, self.car_curr_vel)
                 self.set_waypoint_velocity(waypoints, idx, velocity)
                 self.final_waypoints.append(waypoints[idx])
