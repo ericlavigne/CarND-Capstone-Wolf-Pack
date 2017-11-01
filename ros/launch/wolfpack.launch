@@ -2,13 +2,11 @@
 <launch>
     <arg name="use_ground_truth" default="false" />
     <arg name="velocity" default="64" />
-    <arg name="camera_image_throttle" default="30" />
 
     <!-- Use Styx Launch -->
     <include file="launch/styx.launch">
         <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
         <arg name="velocity" value="$(arg velocity)"/>
-        <arg name="camera_image_throttle" value="$(arg camera_image_throttle)"/>
     </include>
 
     <!-- visualization -->

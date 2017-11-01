@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="camera_image_throttle" default="30" />
-
     <!--DBW Node -->
     <include file="$(find twist_controller)/launch/dbw.launch"/>
 
@@ -19,8 +17,6 @@
 
     <!--Traffic Light Detector Node -->
     <include file="$(find tl_detector)/launch/tl_detector_site.launch"/>
-        <arg name="camera_image_throttle" value="$(arg camera_image_throttle)"/>
-    </include>
 
     <!--Camera Calibration YAML -->
     <param name="grasshopper_calibration_yaml" textfile="$(find styx)../../../data/grasshopper_calibration.yml" />

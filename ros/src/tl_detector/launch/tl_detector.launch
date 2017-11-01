@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="use_ground_truth" default="false" />
-    <arg name="camera_image_throttle" default="30" />
 
     <node pkg="tl_detector" type="tl_detector.py" name="tl_detector" output="log" cwd="node" args="$(arg use_ground_truth)"/>
-    <node pkg="topic_tools" type="throttle" name="image_dropper"
-          args="messages /image_color $(arg camera_image_throttle) /image_color_throttled" />
 </launch>
