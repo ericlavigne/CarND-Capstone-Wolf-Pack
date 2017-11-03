@@ -43,7 +43,7 @@ class DBWNode(object):
         vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35)
         fuel_capacity = rospy.get_param('~fuel_capacity', 13.5)
         brake_deadband = rospy.get_param('~brake_deadband', .1)
-        decel_limit = rospy.get_param('~decel_limit', -1)
+        decel_limit = rospy.get_param('~decel_limit', -5)
         accel_limit = rospy.get_param('~accel_limit', 1.)
         wheel_radius = rospy.get_param('~wheel_radius', 0.2413)
         wheel_base = rospy.get_param('~wheel_base', 2.8498)
@@ -51,7 +51,8 @@ class DBWNode(object):
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
 
-        self.throttle_deadband = 0.05
+        self.brake_deadband = brake_deadband
+        self.decel_limit = decel_limit
         self.steer_pub = rospy.Publisher('/vehicle/steering_cmd',
                                          SteeringCmd, queue_size=1)
         self.throttle_pub = rospy.Publisher('/vehicle/throttle_cmd',
@@ -116,7 +117,7 @@ class DBWNode(object):
             # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f", self.current_linear[0],
             #               self.goal_linear[0], goal_linear_acceleration)
 
-            if(goal_linear_acceleration < self.throttle_deadband and goal_linear_acceleration > 0):
+            if(self.goal_linear[0] != 0 and goal_linear_acceleration < 0 and goal_linear_acceleration > self.brake_deadband):
                 goal_linear_acceleration = 0
 
             throttle, brake, steering = self.gain_controller.control(goal_linear_acceleration, goal_angular_velocity,
@@ -125,7 +126,7 @@ class DBWNode(object):
                                                                      deltat, self.dbw_enabled)
 
             if brake > 0:
-                brake = brake * BrakeCmd.TORQUE_MAX
+                brake = brake * BrakeCmd.TORQUE_MAX / -self.decel_limit
 
             # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f, b:%.2f", self.current_linear[0],
             #               self.goal_linear[0], goal_linear_acceleration, brake)
@@ -148,7 +149,7 @@ class DBWNode(object):
 
         bcmd = BrakeCmd()
         bcmd.enable = True
-        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE # range [0,1]
+        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 
