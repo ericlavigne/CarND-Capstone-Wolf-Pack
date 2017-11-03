@@ -24,9 +24,10 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish. You can change this number
-STOP_DISTANCE = 3.0# Distance in 'm' from TL stop line where car should halt
+STOP_DISTANCE = 2.0# Distance in 'm' from TL stop line where car should halt
 SAFE_DECEL_FACTOR = 0.2
-UNSAFE_VEL_FACTOR = 0.9
+UNSAFE_VEL_FACTOR = 0.85
+EPSILON = 0.1
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -34,10 +35,10 @@ class WaypointUpdater(object):
         rospy.init_node('waypoint_updater')
 
         # Subscribers
-        self.current_pose_sub = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-        self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
-        self.current_velocity_sub = rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
+        rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
 
         # Publishers
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1, latch = True)
@@ -59,13 +60,13 @@ class WaypointUpdater(object):
         self.final_waypoints = []
         self.tl_idx = None
         self.tl_state = None
-        self.init_slow = False
+        self.init_slow = False #flag set in slow_waypoints() and reset in desired_action()
         self.do_work()
 
     def do_work(self):
-        rate = rospy.Rate(17)
+        rate = rospy.Rate(30)
         # ROS parameters
-        self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 40.0))
+        self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 64.0))
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
         self.accel_limit = rospy.get_param('~/twist_controller/accel_limit', 1)
         self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit)
@@ -73,7 +74,6 @@ class WaypointUpdater(object):
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_state != None and self.car_curr_vel != None):
                        self.safe_distance = (self.car_curr_vel ** 2)/(2 * self.decel_limit * SAFE_DECEL_FACTOR)
-                       #rospy.logwarn("safe dist: %f", self.safe_distance)
                        self.closestWaypoint = self.NextWaypoint(self.car_position, self.car_yaw, self.waypoints)
                        self.car_action = self.desired_action(self.tl_idx, self.tl_state, self.closestWaypoint, self.waypoints)
                        self.generate_final_waypoints(self.closestWaypoint, self.waypoints, self.car_action, self.tl_idx)
@@ -125,7 +125,7 @@ class WaypointUpdater(object):
 
     def check_slow(self, tl_state, dist):
         slow1 = (dist < self.safe_distance and dist > self.unsafe_distance)
-        slow2 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and tl_state == "RED" and self.safe_distance > 0.1)
+        slow2 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and tl_state == "RED" and self.safe_distance > EPSILON)
         return  slow1 or slow2 
 
     def check_go(self, tl_index, tl_state, closestWaypoint, dist):
@@ -138,9 +138,10 @@ class WaypointUpdater(object):
     def desired_action(self, tl_index, tl_state, closestWaypoint, waypoints): 
         if tl_index != None:
            dist = self.distance(waypoints, closestWaypoint, tl_index)
-           #rospy.logwarn("Distance: %f", dist)
+           #rospy.loginfo("Distance: %f, Curr Speed: %f", dist,self.car_curr_vel)
            #rospy.logwarn("Unsafe Distance: %f", self.unsafe_distance)
            #rospy.logwarn("Traffic Light Index: %d", tl_index)
+           #rospy.loginfo("Curr Speed: %f",self.car_curr_vel)
            if(self.check_stop(tl_index, tl_state, closestWaypoint, dist)):
               action = "STOP"
               self.prev_action = "STOP"
@@ -194,7 +195,6 @@ class WaypointUpdater(object):
             self.slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
             if self.slow_decel > self.decel_limit:
                self.slow_decel = self.decel_limit
-            #rospy.logwarn("Decel: %f",accel)
             self.init_slow = True
         for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
             dist = self.distance(waypoints, idx, tl_index)
@@ -202,15 +202,13 @@ class WaypointUpdater(object):
                 velocity = math.sqrt(2*self.slow_decel*dist)
                 if (dist < self.unsafe_distance and self.car_curr_vel > self.unsafe_speed):
                    vel2 = self.car_curr_vel ** 2 - 2*self.decel_limit*dist
-                   if vel2 < 0.1:
+                   if vel2 < EPSILON:
                       vel2 = 0.0
                    velocity = math.sqrt(vel2)
-                #rospy.loginfo("Waypoint: %d, Dist to TL: %f, Velocity: %f, Current vel: %f",idx, dist, velocity, self.car_curr_vel)
                 self.set_waypoint_velocity(waypoints, idx, velocity)
                 self.final_waypoints.append(waypoints[idx])
             else:
                 velocity = 0.0
-                #rospy.loginfo("Waypoint: %d, Dist to TL: %f, Velocity: %f",idx, dist, velocity)
                 self.set_waypoint_velocity(waypoints, idx, velocity)
                 self.final_waypoints.append(waypoints[idx])
 
@@ -228,8 +226,8 @@ class WaypointUpdater(object):
 
     def publish(self):
         final_waypoints_msg = Lane()
-        #final_waypoints_msg.header.frame_id = '/world'
-        #final_waypoints_msg.header.stamp = rospy.Time(0)
+        final_waypoints_msg.header.frame_id = '/World'
+        final_waypoints_msg.header.stamp = rospy.Time(0)
         final_waypoints_msg.waypoints = list(self.final_waypoints)
         self.final_waypoints_pub.publish(final_waypoints_msg)    
 
