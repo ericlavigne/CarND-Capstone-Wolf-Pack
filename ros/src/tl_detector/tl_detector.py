@@ -2,9 +2,8 @@
 import rospy
 import numpy as np
 from keras.models import load_model
-from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped, Pose
-from styx_msgs.msg import TrafficLightArray, TrafficLight
+from styx_msgs.msg import TrafficLightArray, TrafficLight, CustomTrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -84,7 +83,7 @@ class TLDetector(object):
         if not self.use_ground_truth:
             sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
-        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', CustomTrafficLight, queue_size=1)
 
         self.bridge = CvBridge()
 
@@ -102,8 +101,8 @@ class TLDetector(object):
         # If ground truth data from tl is enabled.
         if self.use_ground_truth:
             light_wp, state = self.process_traffic_lights()
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
+            msg = self._prepare_result_msg(state, light_wp)
+            self.upcoming_red_light_pub.publish(msg)
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -131,17 +130,25 @@ class TLDetector(object):
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
+            msg = self._prepare_result_msg(state, light_wp)
+            self.upcoming_red_light_pub.publish(msg)
         else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            msg = self._prepare_result_msg(self.last_state, self.last_wp)
+            self.upcoming_red_light_pub.publish(msg)
         self.state_count += 1
+
+    def _prepare_result_msg(self, tl_state, tl_stop_waypoint):
+        tl_result = CustomTrafficLight()
+        tl_result.state = tl_state
+        tl_result.waypoint = tl_stop_waypoint
+        return tl_result
+
 
     def dist_to_point(self, pose, wp_pose):
         x_squared = pow((pose.position.x - wp_pose.position.x), 2)
         y_squared = pow((pose.position.y - wp_pose.position.y), 2)
         dist = sqrt(x_squared + y_squared)
         return dist
-
 
 
     def get_closest_waypoint(self, pose, waypoints):
