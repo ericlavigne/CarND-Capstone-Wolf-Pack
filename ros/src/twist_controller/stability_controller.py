@@ -53,3 +53,6 @@ class TwistController(object):
 
     def update_throttle_pid(self, p, i, d):
         self.throttle_pid.update_gains(p, i, d)
+
+    def reset_throttle_pid(self):
+        self.throttle_pid.reset()

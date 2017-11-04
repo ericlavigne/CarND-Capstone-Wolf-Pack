@@ -51,6 +51,8 @@ class DBWNode(object):
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
 
+        self.brake_deadband = brake_deadband
+        self.decel_limit = decel_limit
         self.steer_pub = rospy.Publisher('/vehicle/steering_cmd',
                                          SteeringCmd, queue_size=1)
         self.throttle_pub = rospy.Publisher('/vehicle/throttle_cmd',
@@ -83,6 +85,10 @@ class DBWNode(object):
         return config
 
     def twist_cmd_callback(self, msg):
+        goal_x = msg.twist.linear.x
+        if (goal_x == 0 or self.goal_linear[0] == 0) and (goal_x != self.goal_linear[0]): #reset the damn thing since we need to hard stop
+            self.twist_controller.reset_throttle_pid()
+
         self.goal_linear = [msg.twist.linear.x, msg.twist.linear.y]
         self.goal_yaw_rate = msg.twist.angular.z
 
@@ -101,21 +107,29 @@ class DBWNode(object):
             linear_acceleration = 0.0
             angular_acceleration = 0.0
             deltat = 0.02
-            
+
             goal_linear_acceleration, goal_angular_velocity = self.twist_controller.control(self.goal_linear,
                                                                                             self.goal_yaw_rate,
                                                                                             self.current_linear,
                                                                                             deltat,
                                                                                             self.dbw_enabled)
+
+            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f", self.current_linear[0],
+            #               self.goal_linear[0], goal_linear_acceleration)
+
+            if(self.goal_linear[0] != 0 and goal_linear_acceleration < 0 and goal_linear_acceleration > self.brake_deadband):
+                goal_linear_acceleration = 0
+
             throttle, brake, steering = self.gain_controller.control(goal_linear_acceleration, goal_angular_velocity,
                                                                      linear_speed, angular_velocity,
                                                                      linear_acceleration, angular_acceleration,
                                                                      deltat, self.dbw_enabled)
-            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f, b:%.2f", self.current_linear[0],
-            #               self.goal_linear[0], goal_linear_acceleration, brake)
 
             if brake > 0:
-                brake = brake * BrakeCmd.TORQUE_MAX / 5
+                brake = brake * BrakeCmd.TORQUE_MAX / -self.decel_limit
+
+            # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f, b:%.2f", self.current_linear[0],
+            #               self.goal_linear[0], goal_linear_acceleration, brake)
 
             if self.dbw_enabled:
                 self.publish(throttle, brake, steering)
@@ -135,7 +149,7 @@ class DBWNode(object):
 
         bcmd = BrakeCmd()
         bcmd.enable = True
-        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE # range [0,1]
+        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 
