@@ -13,5 +13,6 @@ tl:
   detector_resize_width: 128
   detector_resize_height: 96
   projection_threshold: 40
+  detector_rate: 20
   is_carla: true
   color_mode: 'rgb8'
