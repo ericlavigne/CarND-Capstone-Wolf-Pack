@@ -113,13 +113,13 @@ class DBWNode(object):
         
         if old_time is not None:
             deltat = new_time - old_time
-            weight = min(1.0, max(deltat,0.005) / 0.2)
+            weight = min(1.0, max(deltat,0.005) / 0.05)
             
             measured_acceleration = (new_speed - old_speed) * 1.0 / max(deltat,0.005)
             self.current_linear_acceleration = weight * measured_acceleration \
                                                + (1-weight) * self.current_linear_acceleration
             
-            new_yaw_rate = weight * new_yaw_rate + (1 - weight) * old_yaw_rate
+            #new_yaw_rate = weight * new_yaw_rate + (1 - weight) * old_yaw_rate
             #if new_speed > old_speed:
                 #rospy.logwarn("acceleration: %s     new_speed: %s     old_speed: %s     dt: %s",
                 #              self.current_linear_acceleration, new_speed, old_speed, deltat)
@@ -167,6 +167,7 @@ class DBWNode(object):
             #               self.goal_velocity[0], control_linear_acceleration, brake)
 
             if self.dbw_enabled:
+                #rospy.logwarn("publish %s %s %s", throttle, brake, steering)
                 self.publish(throttle, brake, steering)
             rate.sleep()
 
