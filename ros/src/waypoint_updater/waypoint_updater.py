@@ -106,18 +106,19 @@ class WaypointUpdater(object):
         rospy.loginfo("Unregistered from /base_waypoints topic")
 
     def traffic_cb(self, msg):
-        if msg.waypoint != -1:
+        if msg.state == 0:
+           self.tl_state = "RED"
            self.tl_idx = msg.waypoint
-           if msg.state == 0:
-              self.tl_state = "RED"
-           elif msg.state == 1:
-              self.tl_state = "YELLOW"
-           elif msg.state == 2:
-              self.tl_state = "GREEN"
-           elif msg.state == 4:
-              self.tl_state = "NO"
-        else:
+        elif msg.state == 1:
+           self.tl_state = "YELLOW"
+           self.tl_idx = msg.waypoint
+        elif msg.state == 2:
+           self.tl_state = "GREEN"
+           self.tl_idx = msg.waypoint
+        elif msg.state == 4:
            self.tl_state = "NO"
+        if self.tl_state != None and self.tl_idx != None:
+           rospy.logwarn("%d, %s, %d", self.tl_idx, self.tl_state, msg.waypoint)
 
     def current_velocity_cb(self, msg):
         curr_lin = [msg.twist.linear.x, msg.twist.linear.y]
@@ -133,9 +134,10 @@ class WaypointUpdater(object):
         return  stop1 or stop2 
 
     def check_slow(self, tl_state, dist):
-        slow0 = (tl_state != "NO")
-        slow1 = (dist < self.safe_distance and dist > self.unsafe_distance and slow0)
-        slow2 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and self.safe_distance > EPSILON and slow0)
+        slow0 = (tl_state == "YELLOW" or tl_state == "RED")
+        slow1 = (dist < self.safe_distance and dist > self.unsafe_distance and tl_state != "NO")
+        slow2 = (dist > self.go_distance and dist < self.unsafe_distance and self.safe_distance > EPSILON and tl_state != "NO")
+        slow3 = (dist > STOP_DISTANCE and dist < self.go_distance and self.safe_distance > EPSILON and slow0)
         return  slow1 or slow2 
 
     def check_go(self, tl_index, tl_state, closestWaypoint, dist):
@@ -148,7 +150,7 @@ class WaypointUpdater(object):
     def desired_action(self, tl_index, tl_state, closestWaypoint, waypoints): 
         if tl_index != None and tl_state != "NO":
            dist = self.distance(waypoints, closestWaypoint, tl_index)
-           #rospy.logwarn("Distance: %f, TL: %d", dist,tl_index)
+           #rospy.logwarn("%d, %s", tl_index, tl_state)
            #rospy.logwarn("Unsafe Distance: %f", self.unsafe_distance)
            #rospy.logwarn("Traffic Light Index: %d", tl_index)
            #rospy.loginfo("Curr Speed: %f",self.car_curr_vel)
@@ -166,7 +168,7 @@ class WaypointUpdater(object):
               self.prev_action = "GO"
               self.init_slow = False
               return action
-        elif tl_index == None or tl_state == "NO":
+        elif tl_index == None or tl_state == "NO" or tl_index == -1:
             action = "GO"
             self.prev_action = "GO"
             self.init_slow = False
