@@ -122,7 +122,7 @@ class GainController(object):
         brake = 0.0
         if goal_acceleration > 0.0:
             throttle = max(0.0, throttle_gain.predict(goal_acceleration, linear_speed))
-        if goal_acceleration < -0.1:
+        if goal_acceleration < -0.01:
             brake = max(0.0, brake_gain.predict(-1 * goal_acceleration, linear_speed))
         #steer_angle = self.steer_gain.predict(goal_radians_per_meter, linear_speed)
         steer_angle = goal_steering * self.steer_ratio
