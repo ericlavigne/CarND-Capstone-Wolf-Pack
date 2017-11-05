@@ -25,8 +25,9 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish. You can change this number
 STOP_DISTANCE = 2.0# Distance in 'm' from TL stop line where car should halt
 SAFE_DECEL_FACTOR = 0.2
-UNSAFE_VEL_FACTOR = 0.85
+UNSAFE_VEL_FACTOR = 0.3
 EPSILON = 0.1
+MAX_ACCEL = 10
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -52,6 +53,7 @@ class WaypointUpdater(object):
         self.cruise_speed = None
         self.unsafe_speed = None
         self.unsafe_distance = None
+        self.go_distance = None
         self.car_action = None
         self.prev_action = None
         self.closestWaypoint = None
@@ -69,6 +71,7 @@ class WaypointUpdater(object):
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
         self.accel_limit = rospy.get_param('~/twist_controller/accel_limit', 1)
         self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit)
+        self.go_distance = (self.cruise_speed ** 2)/(2 * MAX_ACCEL)
         self.unsafe_speed = self.cruise_speed * UNSAFE_VEL_FACTOR
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_state != None and self.car_curr_vel != None):
@@ -103,11 +106,18 @@ class WaypointUpdater(object):
         rospy.loginfo("Unregistered from /base_waypoints topic")
 
     def traffic_cb(self, msg):
-        if msg.data != -1:
-           self.tl_idx = msg.data
-           self.tl_state = "RED"
+        if msg.waypoint != -1:
+           self.tl_idx = msg.waypoint
+           if msg.state == 0:
+              self.tl_state = "RED"
+           elif msg.state == 1:
+              self.tl_state = "YELLOW"
+           elif msg.state == 2:
+              self.tl_state = "GREEN"
+           elif msg.state == 4:
+              self.tl_state = "NO"
         else:
-           self.tl_state = "GREEN"
+           self.tl_state = "NO"
 
     def current_velocity_cb(self, msg):
         curr_lin = [msg.twist.linear.x, msg.twist.linear.y]
@@ -123,21 +133,22 @@ class WaypointUpdater(object):
         return  stop1 or stop2 
 
     def check_slow(self, tl_state, dist):
-        slow1 = (dist < self.safe_distance and dist > self.unsafe_distance)
-        slow2 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and tl_state == "RED" and self.safe_distance > EPSILON)
+        slow0 = (tl_state != "NO")
+        slow1 = (dist < self.safe_distance and dist > self.unsafe_distance and slow0)
+        slow2 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and self.safe_distance > EPSILON and slow0)
         return  slow1 or slow2 
 
     def check_go(self, tl_index, tl_state, closestWaypoint, dist):
         go1 = (dist > self.safe_distance and tl_index > closestWaypoint)
         go2 = (dist > self.safe_distance and tl_index > closestWaypoint + LOOKAHEAD_WPS)
-        go3 = (tl_state == "GREEN" and dist < self.unsafe_distance) or (tl_index < closestWaypoint)
+        go3 = (tl_state == "GREEN" and dist < self.go_distance) or (tl_index < closestWaypoint)
         go4 = (tl_state == "GREEN" and self.prev_action == "STOP")
         return  go1 or go2 or go3 or go4
 
     def desired_action(self, tl_index, tl_state, closestWaypoint, waypoints): 
-        if tl_index != None:
+        if tl_index != None and tl_state != "NO":
            dist = self.distance(waypoints, closestWaypoint, tl_index)
-           #rospy.loginfo("Distance: %f, Curr Speed: %f", dist,self.car_curr_vel)
+           #rospy.logwarn("Distance: %f, TL: %d", dist,tl_index)
            #rospy.logwarn("Unsafe Distance: %f", self.unsafe_distance)
            #rospy.logwarn("Traffic Light Index: %d", tl_index)
            #rospy.loginfo("Curr Speed: %f",self.car_curr_vel)
@@ -155,7 +166,7 @@ class WaypointUpdater(object):
               self.prev_action = "GO"
               self.init_slow = False
               return action
-        else:
+        elif tl_index == None or tl_state == "NO":
             action = "GO"
             self.prev_action = "GO"
             self.init_slow = False

@@ -15,7 +15,7 @@ import yaml
 import sys
 from keras import backend as K
 
-STATE_COUNT_THRESHOLD = 2
+STATE_COUNT_THRESHOLD = 0
 SMOOTH = 1.
 
 def dice_coef(y_true, y_pred):
@@ -141,7 +141,7 @@ class TLDetector(object):
             msg = self._prepare_result_msg(state, light_wp)
             self.upcoming_red_light_pub.publish(msg)
         else:
-            msg = self._prepare_result_msg(self.last_state, self.last_wp)
+            msg = self._prepare_result_msg(self.state, self.last_wp)
             self.upcoming_red_light_pub.publish(msg)
         self.state_count += 1
 
