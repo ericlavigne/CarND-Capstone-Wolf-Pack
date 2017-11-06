@@ -157,6 +157,7 @@ class WaypointUpdater(object):
               action = "STOP"
               self.prev_action = "STOP"
               self.init_slow = False
+              rospy.logwarn("stopping for TL")
               return action
            elif(self.check_slow(tl_state, dist)):
               action = "SLOW"
