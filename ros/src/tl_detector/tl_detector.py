@@ -15,7 +15,7 @@ import yaml
 import sys
 from keras import backend as K
 
-STATE_COUNT_THRESHOLD = 0
+STATE_COUNT_THRESHOLD = 1
 SMOOTH = 1.
 
 def dice_coef(y_true, y_pred):
@@ -37,7 +37,7 @@ class TLDetector(object):
         self.detector_model = None
         self.lights = []
         self.use_ground_truth = sys.argv[1].lower() == 'true'
-        self.distance_to_tl_threshold = 50.0
+        self.distance_to_tl_threshold = 67.0
         self.state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
