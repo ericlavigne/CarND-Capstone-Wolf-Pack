@@ -7,6 +7,7 @@ from styx_msgs.msg import Lane, Waypoint, CustomTrafficLight
 import math
 import time
 import tf
+from numpy import random
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
 
@@ -22,12 +23,13 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 200# Number of waypoints we will publish. You can change this number
-STOP_DISTANCE = 5.0# Distance in 'm' from TL stop line where car should halt
-SAFE_DECEL_FACTOR = 0.2
-UNSAFE_VEL_FACTOR = 0.2
-EPSILON = 0.1
-MAX_ACCEL_FACTOR = 1.6
+LOOKAHEAD_WPS = 200# Number of waypoints we will publish.
+STOP_DISTANCE = 5.0# Distance in 'm' from TL stop line from which the car starts to stop.
+STOP_HYST = 3# Margin of error for a stopping car.
+SAFE_DECEL_FACTOR = 0.2# Multiplier to the decel limit.
+UNSAFE_VEL_FACTOR = 0.2# Multiplier to the cruise speed.
+EPSILON = 0.1# A small number.
+MAX_ACCEL_FACTOR = 1.6# Multiplier to the decel limit.
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -81,14 +83,15 @@ class WaypointUpdater(object):
                        self.generate_final_waypoints(self.closestWaypoint, self.waypoints, self.car_action, self.tl_idx)
                        self.publish()
                 else:
-                       if self.car_position == None:
-                               rospy.logwarn("/current_pose not received")
-                       if self.waypoints == None:
-                               rospy.logwarn("/base_waypoints not received")
-                       if self.tl_idx == None:
-                               rospy.logwarn("/traffic_waypoint not received")
-                       if self.car_curr_vel == None:
-                               rospy.logwarn("/current_velocity not received")
+                       rand = random.uniform(0,1)
+                       if self.car_position == None and  rand < 0.01:
+                               rospy.logwarn("[WP_UPDATER] /current_pose not received")
+                       if self.waypoints == None and rand < 0.01:
+                               rospy.logwarn("[WP_UPDATER] /base_waypoints not received")
+                       if self.tl_idx == None and rand < 0.01:
+                               rospy.logwarn("[WP_UPDATER] /traffic_waypoint not received")
+                       if self.car_curr_vel == None  and rand < 0.01:
+                               rospy.logwarn("[WP_UPDATER] /current_velocity not received")
                 rate.sleep()
 
     def pose_cb(self, msg):
@@ -130,7 +133,8 @@ class WaypointUpdater(object):
     def check_stop(self, tl_index, tl_state, closestWaypoint, dist):
         stop1 = (tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and (tl_state == "RED" or tl_state == "YELLOW")) 
         stop2 = (tl_index == closestWaypoint and dist < STOP_DISTANCE and tl_state == "RED")
-        return  stop1 or stop2 
+        stop3 = (tl_index + STOP_HYST < closestWaypoint and tl_state == "RED" and self.prev_action == "STOP")
+        return  stop1 or stop2 or stop3
 
     def check_slow(self, tl_state, dist):
         slow1 = (dist < self.safe_distance and dist > self.unsafe_distance and tl_state != "NO")
