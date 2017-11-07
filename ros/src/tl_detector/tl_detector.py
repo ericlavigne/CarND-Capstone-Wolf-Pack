@@ -142,7 +142,7 @@ class TLDetector(object):
         else:
             msg = self._prepare_result_msg(self.state, self.last_wp)
             self.upcoming_red_light_pub.publish(msg)
-        self.state_count += 1
+            self.state_count += 1
 
     def _prepare_result_msg(self, tl_state, tl_stop_waypoint):
         tl_result = CustomTrafficLight()
