@@ -264,7 +264,8 @@ class TLDetector(object):
                     tl_image = self.detect_traffic_light(cv_image)
                     if tl_image is not None:
                         state = self.light_classifier.get_classification(tl_image)
-                        rospy.loginfo("[TL_DETECTOR] Nearest TL-state is: %s", state)
+                        state = 4 if (state == 3) else state # TODO remove hardcoded values. (If not an TL was detected.)
+                        rospy.logwarn("[TL_DETECTOR] Nearest TL-state is: %s", state)
                     else:
                         rospy.loginfo("[TL_DETECTOR] No TL is detected")
                 else:
