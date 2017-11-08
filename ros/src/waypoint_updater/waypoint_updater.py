@@ -24,12 +24,12 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish.
-STOP_DISTANCE = 5.0# Distance in 'm' from TL stop line from which the car starts to stop.
-STOP_HYST = 3# Margin of error for a stopping car.
-SAFE_DECEL_FACTOR = 0.2# Multiplier to the decel limit.
+STOP_DISTANCE = 2.5# Distance in 'm' from TL stop line from which the car starts to stop.
+STOP_HYST = 2# Margin of error for a stopping car.
+SAFE_DECEL_FACTOR = 0.1# Multiplier to the decel limit.
+UNSAFE_DECEL_FACTOR = 0.3# Multiplier to the decel limit
 UNSAFE_VEL_FACTOR = 0.2# Multiplier to the cruise speed.
-EPSILON = 0.1# A small number.
-MAX_ACCEL_FACTOR = 1.6# Multiplier to the decel limit.
+EPSILON = 0.2# A small number.
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -55,7 +55,6 @@ class WaypointUpdater(object):
         self.cruise_speed = None
         self.unsafe_speed = None
         self.unsafe_distance = None
-        self.go_distance = None
         self.car_action = None
         self.prev_action = None
         self.closestWaypoint = None
@@ -72,13 +71,14 @@ class WaypointUpdater(object):
         self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 64.0))
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
         self.accel_limit = rospy.get_param('~/twist_controller/accel_limit', 1)
-        self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit)
-        self.go_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit * MAX_ACCEL_FACTOR)
+        self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit * 0.3)
         self.unsafe_speed = self.cruise_speed * UNSAFE_VEL_FACTOR
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_state != None and self.car_curr_vel != None):
                        self.safe_distance = (self.car_curr_vel ** 2)/(2 * self.decel_limit * SAFE_DECEL_FACTOR)
                        self.closestWaypoint = self.NextWaypoint(self.car_position, self.car_yaw, self.waypoints)
+                       if self.tl_idx != None:
+                          self.distance_to_tl = self.distance(self.waypoints, self.closestWaypoint, self.tl_idx)
                        self.car_action = self.desired_action(self.tl_idx, self.tl_state, self.closestWaypoint, self.waypoints)
                        self.generate_final_waypoints(self.closestWaypoint, self.waypoints, self.car_action, self.tl_idx)
                        self.publish()
@@ -131,16 +131,14 @@ class WaypointUpdater(object):
         pass
 
     def check_stop(self, tl_index, tl_state, closestWaypoint, dist):
-        stop1 = (tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and (tl_state == "RED" or tl_state == "YELLOW")) 
+        stop1 = (tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and (tl_state == "RED" )) 
         stop2 = (tl_index == closestWaypoint and dist < STOP_DISTANCE and tl_state == "RED")
         stop3 = (tl_index + STOP_HYST < closestWaypoint and tl_state == "RED" and self.prev_action == "STOP")
         return  stop1 or stop2 or stop3
 
     def check_slow(self, tl_state, dist):
-        slow1 = (dist < self.safe_distance and dist > self.unsafe_distance and tl_state != "NO")
-        slow2 = (dist > self.go_distance and dist < self.unsafe_distance and self.safe_distance > EPSILON and tl_state != "NO")
-        slow3 = (dist > STOP_DISTANCE and dist < self.go_distance and self.safe_distance > EPSILON and tl_state != "NO")
-        return  slow1 or slow2 or slow3
+        slow1 = (dist > STOP_DISTANCE and dist < self.unsafe_distance and tl_state != "NO" and self.safe_distance > EPSILON)
+        return  slow1 
 
     def check_go(self, tl_index, tl_state, closestWaypoint, dist):
         go1 = (dist > self.safe_distance and tl_index > closestWaypoint)
@@ -151,13 +149,12 @@ class WaypointUpdater(object):
 
     def desired_action(self, tl_index, tl_state, closestWaypoint, waypoints): 
         if tl_index != None and tl_state != "NO":
-           dist = self.distance(waypoints, closestWaypoint, tl_index)
-           #rospy.logwarn("di: %f, sd: %f, st: %s, tl:%d", dist, self.safe_distance, tl_state, tl_index)
+           dist = self.distance_to_tl
+           #rospy.logwarn("di: %f, usd: %f, sd: %f, st: %s, tl:%d", dist, self.unsafe_distance, self.safe_distance, tl_state, tl_index)
            if(self.check_stop(tl_index, tl_state, closestWaypoint, dist)):
               action = "STOP"
               self.prev_action = "STOP"
               self.init_slow = False
-              rospy.logwarn("stopping for TL")
               return action
            elif(self.check_slow(tl_state, dist)):
               action = "SLOW"
@@ -182,7 +179,7 @@ class WaypointUpdater(object):
         for idx in range(closestWaypoint, end):
             dist = self.distance(waypoints, closestWaypoint, idx+1)
             vel2 = init_vel ** 2 - 2 * self.decel_limit * dist
-            if vel2 < EPSILON:
+            if vel2 < 0.1:
                vel2 = 0.0
             velocity = math.sqrt(vel2)
             self.set_waypoint_velocity(waypoints, idx, velocity)
@@ -203,18 +200,17 @@ class WaypointUpdater(object):
 
     def slow_waypoints(self, closestWaypoint, tl_index, waypoints):
         if(self.init_slow == False):
-            dist_to_TL = self.distance(waypoints, closestWaypoint, tl_index)
-            self.slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
-            if self.slow_decel > self.decel_limit:
-               self.slow_decel = self.decel_limit
-            self.init_slow = True
+          dist_to_TL = self.distance_to_tl
+          self.slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
+          self.init_slow = True
         for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
             dist = self.distance(waypoints, idx, tl_index)
             if (idx < tl_index):
-                velocity = math.sqrt(2*self.slow_decel*dist)
-                if (dist < self.unsafe_distance and self.car_curr_vel > self.unsafe_speed):
-                   vel2 = self.car_curr_vel ** 2 - 2*self.decel_limit*dist
-                   if vel2 < EPSILON:
+                if self.slow_decel != self.decel_limit:
+                   velocity = math.sqrt(2*self.slow_decel*dist)
+                else:
+                   vel2 = self.car_curr_vel ** 2 - 2*self.slow_decel*dist
+                   if vel2 < 0.1:
                       vel2 = 0.0
                    velocity = math.sqrt(vel2)
                 self.set_waypoint_velocity(waypoints, idx, velocity)
