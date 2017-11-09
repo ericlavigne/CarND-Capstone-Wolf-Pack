@@ -28,7 +28,6 @@ STOP_DISTANCE = 2.5# Distance in 'm' from TL stop line from which the car starts
 STOP_HYST = 2# Margin of error for a stopping car.
 SAFE_DECEL_FACTOR = 0.1# Multiplier to the decel limit.
 UNSAFE_DECEL_FACTOR = 0.3# Multiplier to the decel limit
-UNSAFE_VEL_FACTOR = 0.2# Multiplier to the cruise speed.
 EPSILON = 0.2# A small number.
 
 class WaypointUpdater(object):
@@ -53,7 +52,6 @@ class WaypointUpdater(object):
         self.car_curr_vel = None
         self.slow_decel = None
         self.cruise_speed = None
-        self.unsafe_speed = None
         self.unsafe_distance = None
         self.car_action = None
         self.prev_action = None
@@ -71,8 +69,7 @@ class WaypointUpdater(object):
         self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 64.0))
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
         self.accel_limit = rospy.get_param('~/twist_controller/accel_limit', 1)
-        self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit * 0.3)
-        self.unsafe_speed = self.cruise_speed * UNSAFE_VEL_FACTOR
+        self.unsafe_distance = (self.cruise_speed ** 2)/(2 * self.decel_limit * UNSAFE_DECEL_FACTOR)
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_state != None and self.car_curr_vel != None):
                        self.safe_distance = (self.car_curr_vel ** 2)/(2 * self.decel_limit * SAFE_DECEL_FACTOR)
