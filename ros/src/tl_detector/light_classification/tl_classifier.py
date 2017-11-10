@@ -29,6 +29,7 @@ class TLClassifier(object):
 
         """
         resized = cv2.resize(image, (self.width,self.height))
+        resized = resized / 255.; # Normalization
         # necessary work around to avoid troubles with keras
         with self.graph.as_default():
             predictions = self.model.predict(resized.reshape((1, self.height, self.width, self.channels)))
