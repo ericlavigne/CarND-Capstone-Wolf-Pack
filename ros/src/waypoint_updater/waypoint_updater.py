@@ -24,10 +24,10 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish.
-STOP_DISTANCE = 3.0# Distance in 'm' from TL stop line from which the car starts to stop.
+STOP_DISTANCE = 3.75# Distance in 'm' from TL stop line from which the car starts to stop.
 STOP_HYST = 2# Margin of error for a stopping car.
 SAFE_DECEL_FACTOR = 0.1# Multiplier to the decel limit.
-UNSAFE_DECEL_FACTOR = 0.27# Multiplier to the decel limit
+UNSAFE_DECEL_FACTOR = 0.3# Multiplier to the decel limit
 SAFE_DIST_THRESH = 0.2# A small number.
 
 class WaypointUpdater(object):
@@ -149,20 +149,24 @@ class WaypointUpdater(object):
               action = "STOP"
               self.prev_action = "STOP"
               self.init_slow = False
+              #rospy.logwarn("%s, %s",self.car_action, self.tl_state)
               return action
            elif(self.check_slow(tl_state, dist)):
               action = "SLOW"
               self.prev_action = "SLOW"
+              #rospy.logwarn("%s, %s",self.car_action, self.tl_state)
               return action
            elif(self.check_go(tl_index, tl_state, closestWaypoint, dist)):
               action = "GO"
               self.prev_action = "GO"
               self.init_slow = False
+              #rospy.logwarn("%s, %s",self.car_action, self.tl_state)
               return action
         elif tl_index == None or tl_state == "NO" or tl_index == -1:
             action = "GO"
             self.prev_action = "GO"
             self.init_slow = False
+            #rospy.logwarn("%s, %s",self.car_action, self.tl_state)
             return action 
 
     def stop_waypoints(self, closestWaypoint, waypoints):
@@ -196,6 +200,11 @@ class WaypointUpdater(object):
         if(self.init_slow == False):
           dist_to_TL = self.distance_to_tl
           self.slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
+          danger_speed = 0.53 * self.cruise_speed
+          danger_decel = 0.9 * self.decel_limit
+          danger_dist = (self.cruise_speed ** 2)/(2 * danger_decel)
+          if self.car_curr_vel > danger_speed and dist_to_TL < danger_dist:
+             self.slow_decel = self.decel_limit
           self.init_slow = True
         for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
             dist = self.distance(waypoints, idx, tl_index)
