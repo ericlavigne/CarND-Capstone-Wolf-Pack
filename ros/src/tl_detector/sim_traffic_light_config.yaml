@@ -19,7 +19,8 @@ tl:
   classifier_resize_width: 32
   detector_resize_width: 128
   detector_resize_height: 96
-  projection_threshold: 40
+  projection_threshold: 2
+  projection_min: 200
   detector_rate: 6
   is_carla: false
   color_mode: 'rgb8'
