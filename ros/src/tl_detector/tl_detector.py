@@ -55,6 +55,7 @@ class TLDetector(object):
         resize_width = self.config['tl']['classifier_resize_width']
         resize_height = self.config['tl']['classifier_resize_height']
         self.light_classifier.setup_classifier(model, resize_width, resize_height)
+        self.invalid_class_number = 3
 
         #Detector setup
         self.detector_model = load_model(self.config['tl']['tl_detection_model'], custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef })
@@ -264,7 +265,7 @@ class TLDetector(object):
                     tl_image = self.detect_traffic_light(cv_image)
                     if tl_image is not None:
                         state = self.light_classifier.get_classification(tl_image)
-                        state = 4 if (state == 3) else state # TODO remove hardcoded values. (If not an TL was detected.)
+                        state = state if (state != self.invalid_class_number) else TrafficLight.UNKNOWN
                         rospy.logwarn("[TL_DETECTOR] Nearest TL-state is: %s", state)
                     else:
                         rospy.loginfo("[TL_DETECTOR] No TL is detected")
