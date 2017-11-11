@@ -2,9 +2,8 @@
 import rospy
 import numpy as np
 from keras.models import load_model
-from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped, Pose
-from styx_msgs.msg import TrafficLightArray, TrafficLight
+from styx_msgs.msg import TrafficLightArray, TrafficLight, CustomTrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -16,7 +15,7 @@ import yaml
 import sys
 from keras import backend as K
 
-STATE_COUNT_THRESHOLD = 2
+STATE_COUNT_THRESHOLD = 1
 SMOOTH = 1.
 
 def dice_coef(y_true, y_pred):
@@ -38,7 +37,7 @@ class TLDetector(object):
         self.detector_model = None
         self.lights = []
         self.use_ground_truth = sys.argv[1].lower() == 'true'
-        self.distance_to_tl_threshold = 50.0
+        self.distance_to_tl_threshold = 67.0
         self.state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
@@ -84,7 +83,7 @@ class TLDetector(object):
         if not self.use_ground_truth:
             sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
-        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', CustomTrafficLight, queue_size=1)
 
         self.bridge = CvBridge()
 
@@ -105,8 +104,8 @@ class TLDetector(object):
         # If ground truth data from tl is enabled.
         if self.use_ground_truth:
             light_wp, state = self.process_traffic_lights()
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
+            msg = self._prepare_result_msg(state, light_wp)
+            self.upcoming_red_light_pub.publish(msg)
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -137,19 +136,26 @@ class TLDetector(object):
             self.state_count = 0
             self.state = state
         elif self._pass_threshold():
-            light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
+            msg = self._prepare_result_msg(state, light_wp)
+            self.upcoming_red_light_pub.publish(msg)
         else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            msg = self._prepare_result_msg(self.state, self.last_wp)
+            self.upcoming_red_light_pub.publish(msg)
             self.state_count += 1
+
+    def _prepare_result_msg(self, tl_state, tl_stop_waypoint):
+        tl_result = CustomTrafficLight()
+        tl_result.state = tl_state
+        tl_result.waypoint = tl_stop_waypoint
+        return tl_result
+
 
     def dist_to_point(self, pose, wp_pose):
         x_squared = pow((pose.position.x - wp_pose.position.x), 2)
         y_squared = pow((pose.position.y - wp_pose.position.y), 2)
         dist = sqrt(x_squared + y_squared)
         return dist
-
 
 
     def get_closest_waypoint(self, pose, waypoints):
@@ -264,7 +270,8 @@ class TLDetector(object):
                     tl_image = self.detect_traffic_light(cv_image)
                     if tl_image is not None:
                         state = self.light_classifier.get_classification(tl_image)
-                        rospy.loginfo("[TL_DETECTOR] Nearest TL-state is: %s", state)
+                        state = 4 if (state == 3) else state # TODO remove hardcoded values. (If not an TL was detected.)
+                        #rospy.logwarn("[TL_DETECTOR] Nearest TL-state is: %s", state)
                     else:
                         rospy.loginfo("[TL_DETECTOR] No TL is detected")
                 else:
