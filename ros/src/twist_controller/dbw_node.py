@@ -150,8 +150,7 @@ class DBWNode(object):
             # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f", self.current_velocity[0],
             #               self.goal_velocity[0], control_linear_acceleration)
 
-            if(self.goal_velocity[0] != 0 and control_linear_acceleration < 0 and control_linear_acceleration > -self.brake_deadband):
-                goal_linear_acceleration = 0
+
 
             throttle, brake, steering = self.gain_controller.control(control_linear_acceleration,
                                                                      control_yaw_rate,
@@ -159,6 +158,9 @@ class DBWNode(object):
                                                                      self.current_linear_acceleration,
                                                                      self.current_yaw_rate,
                                                                      self.dbw_enabled)
+
+            if(self.goal_velocity[0] != 0 and brake > 0 and brake < self.brake_deadband):
+                brake = 0
 
             if brake > 0:
                 brake = brake * BrakeCmd.TORQUE_MAX / -self.decel_limit

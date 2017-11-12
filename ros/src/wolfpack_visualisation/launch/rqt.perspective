@@ -227,7 +227,7 @@
                 }, 
                 "topics": {
                   "type": "repr", 
-                  "repr": "u'/vehicle/brake_cmd//pedal_cmd'"
+                  "repr": "u'/vehicle/brake_cmd/pedal_cmd'"
                 }, 
                 "y_limits": {
                   "type": "repr", 
@@ -235,7 +235,7 @@
                 }, 
                 "x_limits": {
                   "type": "repr", 
-                  "repr": "[177.37782502174377, 178.37782502174377]"
+                  "repr": "[0.0, 1.0]"
                 }
               }, 
               "groups": {}
