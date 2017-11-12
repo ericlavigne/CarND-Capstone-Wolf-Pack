@@ -58,7 +58,7 @@ class WaypointUpdater(object):
         self.do_work()
 
     def do_work(self):
-        rate = rospy.Rate(30)
+        rate = rospy.Rate(10)
         # ROS parameters
         self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 64.0))
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
