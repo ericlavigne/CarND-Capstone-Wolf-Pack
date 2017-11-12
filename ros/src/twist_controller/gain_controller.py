@@ -3,6 +3,7 @@ import random
 import rospy
 import time
 from math import atan2, pi, sqrt
+from pid import PID
 from scipy.optimize import curve_fit
 
 def steer_model(x, steer_ratio):
@@ -96,6 +97,12 @@ class GainController(object):
         self.brake_gains = [Regression(model_fn=brake_model, model=[1.0], \
                                        name="brake0",verbosity=0)]
 
+        # PIDs used only to force exploration when model is inaccurate
+        throttle_kp = 1.0; throttle_ki = 0.1; throttle_kd = 0.2
+        self.throttle_pid = PID(throttle_kp, throttle_ki, throttle_kd, -1.0, 1.0)
+        brake_kp = 1.0; brake_ki = 0.1; brake_kd = 0.2
+        self.brake_pid = PID(brake_kp, brake_ki, brake_kd, -1.0, 1.0)
+
     def control(self, goal_acceleration, goal_steering, #goal_radians_per_meter,
                       linear_speed, linear_acceleration,
                       angular_velocity,
@@ -126,7 +133,20 @@ class GainController(object):
             brake = max(0.0, brake_gain.predict(-1 * goal_acceleration, linear_speed))
         #steer_angle = self.steer_gain.predict(goal_radians_per_meter, linear_speed)
         steer_angle = goal_steering * self.steer_ratio
-        
+
+        # If results don't match intentions, model may be inaccurate. Force exploration in appropriate direction.
+        pid_adj = 0.0
+        cte = goal_acceleration - linear_acceleration
+        cte = max(-1.0, min(cte,1.0)) # force cte in [-1,1] range for moderation
+        if goal_acceleration > 0.0:
+            self.brake_pid.reset()
+            pid_adj = self.throttle_pid.step(cte,1.0)
+            throttle = self.exploration_curve(throttle, pid_adj)
+        if goal_acceleration < -0.01:
+            self.throttle_pid.reset()
+            pid_adj = self.brake_pid.step(-cte,1.0)
+            brake = self.exploration_curve(brake, pid_adj)
+
         if throttle > self.max_throttle:
             throttle = self.max_throttle
         if (brake * -1) > self.max_brake:
@@ -149,9 +169,17 @@ class GainController(object):
         self.last_brake = brake
         self.last_steer_angle = steer_angle
         
-        #if random.uniform(0,1) < 0.01:
-        #    rospy.logwarn("goal: %s    actual: %s    throttle: %s    brake: %s",
-        #                  goal_acceleration, linear_acceleration, throttle, brake)
+        #if random.uniform(0,1) < 0.04:
+        #    rospy.logwarn("goal: %s    actual: %s    throttle: %s    brake: %s    adj: %s",
+        #                  goal_acceleration, linear_acceleration, throttle, brake, pid_adj)
         
         return throttle, brake, steer_angle
         
+    def exploration_curve(self, prior, adj):
+            """Interprets adjustment in [-1,1] range as a curve from 10% of prior up to 200%+0.2 of prior"""
+            if adj < 0.0:
+              return prior * (1.0 + adj * 0.9)
+            elif adj < 0.5:
+              return prior * (1.0 + adj * 1.0)
+            else:
+              return prior * (1.0 + adj * 1.0) + 0.4 * (adj - 0.5)
