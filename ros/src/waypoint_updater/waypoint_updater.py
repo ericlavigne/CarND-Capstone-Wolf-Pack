@@ -173,6 +173,10 @@ class WaypointUpdater(object):
             velocity = math.sqrt(vel2)
             self.set_waypoint_velocity(waypoints, idx, velocity)
             self.final_waypoints.append(waypoints[idx])
+        v0 = self.get_waypoint_velocity(self.final_waypoints[0])
+        v1 = self.get_waypoint_velocity(self.final_waypoints[1])
+        v2 = self.get_waypoint_velocity(self.final_waypoints[2])
+        rospy.logwarn("acc:%f, cur:%f, wp:%f %f %f", self.decel_limit, self.car_curr_vel,  v0, v1, v2)
 
     def go_waypoints(self, closestWaypoint, waypoints):
         init_vel = self.car_curr_vel
@@ -186,18 +190,22 @@ class WaypointUpdater(object):
                velocity = self.cruise_speed
             self.set_waypoint_velocity(waypoints, idx, velocity)
             self.final_waypoints.append(waypoints[idx])
+        v0 = self.get_waypoint_velocity(self.final_waypoints[0])
+        v1 = self.get_waypoint_velocity(self.final_waypoints[1])
+        v2 = self.get_waypoint_velocity(self.final_waypoints[2])
+        rospy.logwarn("acc:%f, cur:%f, wp:%f %f %f", self.accel_limit, self.car_curr_vel,  v0, v1, v2)
 
     def slow_waypoints(self, closestWaypoint, tl_index, waypoints):
         dist_to_TL = self.distance_to_tl
         slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
-        #rospy.logwarn("decel: %f", slow_decel)
         if slow_decel > self.decel_limit:
            slow_decel = self.decel_limit
-        vel1 = self.car_curr_vel
-        for idx in range(closestWaypoint, closestWaypoint + LOOKAHEAD_WPS):
-            dist = self.distance(waypoints, idx, tl_index)
+        init_vel = self.car_curr_vel
+        end = closestWaypoint + LOOKAHEAD_WPS
+        for idx in range(closestWaypoint, end):
+            dist = self.distance(waypoints, closestWaypoint, idx+1)
             if (idx < tl_index):
-                vel2 = vel1 ** 2 - 2 * slow_decel * dist
+                vel2 = init_vel ** 2 - 2 * slow_decel * dist
                 if vel2 < 0.1:
                    vel2 = 0.0
                 velocity = math.sqrt(vel2)
@@ -207,6 +215,10 @@ class WaypointUpdater(object):
                 velocity = 0.0
                 self.set_waypoint_velocity(waypoints, idx, velocity)
                 self.final_waypoints.append(waypoints[idx])
+        v0 = self.get_waypoint_velocity(self.final_waypoints[0])
+        v1 = self.get_waypoint_velocity(self.final_waypoints[1])
+        v2 = self.get_waypoint_velocity(self.final_waypoints[2])
+        rospy.logwarn("acc:%f, cur:%f, wp:%f %f %f", slow_decel, self.car_curr_vel,  v0, v1, v2)
 
     def generate_final_waypoints(self, closestWaypoint, waypoints, action, tl_index):
         self.final_waypoints = []
