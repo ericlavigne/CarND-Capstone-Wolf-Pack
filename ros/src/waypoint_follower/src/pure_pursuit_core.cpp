@@ -101,6 +101,39 @@ double PurePursuit::calcCurvature(geometry_msgs::Point target) const
   return kappa;
 }
 
+double PurePursuit::calcAcceleration() const
+{
+  int i = -1;
+  double dx = 0.0;
+  double vf = 0.0;
+  while(((i+1) < current_waypoints_.getSize()) &&
+        !(dx > 2.0 ||
+          (dx > 0.1 && vf < 0.01)))
+  {
+    i++;
+    dx = getPlaneDistance(current_waypoints_.getWaypointPosition(i),
+                          current_pose_.pose.position);
+    vf = getCmdVelocity(i);
+  }
+  if(dx < 0.01) {
+    dx = 0.01;
+  }
+  double vo = current_velocity_.twist.linear.x;
+  double vf2 = pow(vf,2);
+  double vo2 = pow(vo,2);
+  double a = (vf2 - vo2) / (2 * dx);
+  if(vf < 0.01 && vo > 0.01) {
+    a = -10.0;
+  }
+
+  if(a < -9) {
+    ROS_ERROR_STREAM("pure_pursuit: HARD BRAKE i=" << i << "/" << current_waypoints_.getSize() << " dx=" << dx << " vf=" << vf << " CmdVel=" << getCmdVelocity(i));
+  } else {
+    ROS_ERROR_STREAM("pure_pursuit: wp=" << i << " dx=" << dx << " vo=" << vo << " vf=" << vf << " a=" << a);
+  }
+  return a;
+}
+
 // linear interpolation of next target
 bool PurePursuit::interpolateNextTarget(int next_waypoint, geometry_msgs::Point *next_target) const
 {
@@ -391,7 +424,7 @@ geometry_msgs::TwistStamped PurePursuit::go()
 
   // ROS_INFO("next_target : ( %lf , %lf , %lf)", next_target.x, next_target.y,next_target.z);
 
-  return outputTwist(calcTwist(calcCurvature(position_of_next_target_), getCmdVelocity(0)));
+  return outputTwist(calcTwist(calcCurvature(position_of_next_target_), calcAcceleration()));
 
 // ROS_INFO("linear : %lf, angular : %lf",twist.twist.linear.x,twist.twist.angular.z);
 
