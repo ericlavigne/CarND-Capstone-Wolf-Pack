@@ -31,11 +31,11 @@ class TwistController(object):
                                 decel_limit,
                                 accel_limit)
 
-    def control(self, goal_velocity, goal_angular_velocity, current_velocity, deltat, dbw_enabled):
+    def control(self, goal_acceleration, goal_angular_velocity, current_velocity, deltat, dbw_enabled):
         current_speed = sqrt(current_velocity[0]**2 + current_velocity[1]**2)
-        goal_speed = sqrt(goal_velocity[0]**2 + goal_velocity[1]**2)
-        speed_diff = goal_speed - current_speed
-        acceleration = self.throttle_pid.step(speed_diff, deltat)
+        #goal_speed = sqrt(goal_velocity[0]**2 + goal_velocity[1]**2)
+        #speed_diff = goal_speed - current_speed
+        acceleration = self.throttle_pid.step(goal_acceleration, deltat)
         
         angular_velocity = self.steer_pid.step(goal_angular_velocity, deltat)
         

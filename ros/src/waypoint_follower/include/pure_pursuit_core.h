@@ -87,6 +87,7 @@ private:
   void getNextWaypoint();
   geometry_msgs::TwistStamped outputZero() const;
   geometry_msgs::TwistStamped outputTwist(geometry_msgs::Twist t) const;
+  double calcAcceleration() const;
 
 public:
   PurePursuit(bool linear_interpolate_mode)
