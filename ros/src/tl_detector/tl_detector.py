@@ -54,6 +54,7 @@ class TLDetector(object):
         resize_width = self.config['tl']['classifier_resize_width']
         resize_height = self.config['tl']['classifier_resize_height']
         self.light_classifier.setup_classifier(model, resize_width, resize_height)
+        self.invalid_class_number = 3
 
         #Detector setup
         self.detector_model = load_model(self.config['tl']['tl_detection_model'], custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef })
@@ -66,6 +67,7 @@ class TLDetector(object):
         self.middle_col = self.resize_width/2
         self.is_carla = self.config['tl']['is_carla']
         self.projection_threshold = self.config['tl']['projection_threshold']
+        self.projection_min = self.config['tl']['projection_min']
         self.color_mode = self.config['tl']['color_mode']
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
@@ -119,7 +121,7 @@ class TLDetector(object):
         self.camera_image = msg
 
     def _pass_threshold(self):
-	if self.state == TrafficLight.YELLOW:
+        if self.state == TrafficLight.YELLOW:
             return self.state_count >= STATE_COUNT_THRESHOLD - 1
         return self.state_count >= STATE_COUNT_THRESHOLD
 
@@ -184,15 +186,28 @@ class TLDetector(object):
         return closest_wp_idx
 
     def _extract_image(self, pred_image_mask, image):
-        column_projection = np.sum(pred_image_mask, axis = 0)
-
-        if (np.max(column_projection) < self.projection_threshold):
+        if (np.max(pred_image_mask) < self.projection_min):
             return None
 
-        non_zero_column_index = np.argwhere(column_projection >= self.projection_threshold)
+        row_projection = np.sum(pred_image_mask, axis = 1)
+        row_index =  np.argmax(row_projection)
 
-        if non_zero_column_index.size == 0:
+        if (np.max(row_projection) < self.projection_threshold):
             return None
+
+        zero_row_indexes = np.argwhere(row_projection <= self.projection_threshold)
+        top_part = zero_row_indexes[zero_row_indexes < row_index]
+        top = np.max(top_part) if top_part.size > 0 else 0
+        bottom_part = zero_row_indexes[zero_row_indexes > row_index]
+        bottom = np.min(bottom_part) if bottom_part.size > 0 else self.resize_height
+
+        roi = pred_image_mask[top:bottom,:]
+        column_projection = np.sum(roi, axis = 0)
+
+        if (np.max(column_projection) < self.projection_min):
+            return None
+
+        non_zero_column_index = np.argwhere(column_projection > self.projection_min)
 
         index_of_column_index =  np.argmin(np.abs(non_zero_column_index - self.middle_col))
         column_index = non_zero_column_index[index_of_column_index][0]
@@ -202,17 +217,6 @@ class TLDetector(object):
         left = np.max(left_side) if left_side.size > 0 else 0
         right_side = zero_colum_indexes[zero_colum_indexes > column_index]
         right = np.min(right_side) if right_side.size > 0 else self.resize_width
-
-        #roi = pred_image_mask[:,left:right]
-
-        row_projection = np.sum(pred_image_mask, axis = 1)
-        row_index =  np.argmax(row_projection)
-
-        zero_row_indexes = np.argwhere(row_projection == 0)
-        top_part = zero_row_indexes[zero_row_indexes < row_index]
-        top = np.max(top_part) if top_part.size > 0 else 0
-        bottom_part = zero_row_indexes[zero_row_indexes > row_index]
-        bottom = np.min(bottom_part) if bottom_part.size > 0 else self.resize_height
         return image[int(top*self.resize_height_ratio):int(bottom*self.resize_height_ratio), int(left*self.resize_width_ratio):int(right*self.resize_width_ratio)] 
 
     def detect_traffic_light(self, cv_image):
@@ -270,8 +274,8 @@ class TLDetector(object):
                     tl_image = self.detect_traffic_light(cv_image)
                     if tl_image is not None:
                         state = self.light_classifier.get_classification(tl_image)
-                        state = 4 if (state == 3) else state # TODO remove hardcoded values. (If not an TL was detected.)
-                        #rospy.logwarn("[TL_DETECTOR] Nearest TL-state is: %s", state)
+                        state = state if (state != self.invalid_class_number) else TrafficLight.UNKNOWN
+                        rospy.loginfo("[TL_DETECTOR] Nearest TL-state is: %s", state)
                     else:
                         rospy.loginfo("[TL_DETECTOR] No TL is detected")
                 else:

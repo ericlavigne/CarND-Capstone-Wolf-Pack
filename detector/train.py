@@ -64,7 +64,6 @@ def train_and_predict(parent_folder):
     print_heading('Predicting masks on test data...')
 
     imgs_mask_test = model.predict(imgs_test, verbose=1)
-    np.save('imgs_mask_test.npy', imgs_mask_test)
 
     print_heading('Saving predicted masks to files...')
 
