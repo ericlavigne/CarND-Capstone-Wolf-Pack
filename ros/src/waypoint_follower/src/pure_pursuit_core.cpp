@@ -103,6 +103,9 @@ double PurePursuit::calcCurvature(geometry_msgs::Point target) const
 
 double PurePursuit::calcAcceleration() const
 {
+  double vo = current_velocity_.twist.linear.x;
+  double lookahead = vo * 1.0; // 2.0 second ahead
+  if(lookahead < 2.0) { lookahead = 2.0; }
 
   int i = getClosestWaypoint(current_waypoints_.getCurrentWaypoints(),current_pose_.pose);
   double dx = 0.0;
@@ -112,7 +115,7 @@ double PurePursuit::calcAcceleration() const
     dx = getPlaneDistance(current_waypoints_.getWaypointPosition(i),
                           current_pose_.pose.position);
     vf = getCmdVelocity(i);
-    if(dx > 2.0) {
+    if(dx > lookahead) {
       break;
     }
     if(dx > 0.1 && vf < 0.01) {
@@ -123,13 +126,13 @@ double PurePursuit::calcAcceleration() const
   if(dx < 0.01) {
     dx = 0.01;
   }
-  double vo = current_velocity_.twist.linear.x;
   double vf2 = pow(vf,2);
   double vo2 = pow(vo,2);
   double a = (vf2 - vo2) / (2 * dx);
   if(vf < 0.01 && vo > 0.01) {
     a = -10.0;
   }
+  if(a < -10.0) { a = -10.0; }
 
   if(a < -9) {
     ROS_ERROR_STREAM("pure_pursuit: HARD BRAKE i=" << i << "/" << current_waypoints_.getSize() << " dx=" << dx
