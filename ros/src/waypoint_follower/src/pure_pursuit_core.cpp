@@ -104,8 +104,10 @@ double PurePursuit::calcCurvature(geometry_msgs::Point target) const
 double PurePursuit::calcAcceleration() const
 {
   double vo = current_velocity_.twist.linear.x;
-  double lookahead = vo * 1.0; // 2.0 second ahead
-  if(lookahead < 2.0) { lookahead = 2.0; }
+  double lookahead_seconds = 2.0;
+  double lookahead_min_meters = 2.0;
+  double lookahead = vo * lookahead_seconds;
+  if(lookahead < lookahead_min_meters) { lookahead = lookahead_min_meters; }
 
   int i = getClosestWaypoint(current_waypoints_.getCurrentWaypoints(),current_pose_.pose);
   double dx = 0.0;
@@ -129,9 +131,7 @@ double PurePursuit::calcAcceleration() const
   double vf2 = pow(vf,2);
   double vo2 = pow(vo,2);
   double a = (vf2 - vo2) / (2 * dx);
-  if(vf < 0.01 && vo > 0.01) {
-    a = -10.0;
-  }
+
   if(a < -10.0) { a = -10.0; }
 
   if(a < -9) {
