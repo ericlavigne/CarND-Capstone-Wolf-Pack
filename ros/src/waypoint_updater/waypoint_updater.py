@@ -27,6 +27,7 @@ LOOKAHEAD_WPS = 200# Number of waypoints we will publish.
 STOP_DISTANCE = 2.00# Distance in 'm' from TL stop line from which the car starts to stop.
 STOP_HYST = 2# Margin of error for a stopping car.
 SAFE_DECEL_FACTOR = 0.1# Multiplier to the decel limit.
+ACC_FACTOR = 0.5# Multiplier to the accel limit
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -120,9 +121,10 @@ class WaypointUpdater(object):
         pass
 
     def check_stop(self, tl_index, tl_state, closestWaypoint, dist):
-        stop1 = (tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and tl_state == "RED") 
-        stop2 = (tl_index == closestWaypoint and dist < STOP_DISTANCE and tl_state == "RED")
-        stop3 = (tl_index + STOP_HYST < closestWaypoint and tl_state == "RED" and self.prev_action == "STOP" and dist == 99999)
+        stop0 = tl_state == "RED" or tl_state == "YELLOW"
+        stop1 = (tl_index > closestWaypoint and tl_index < closestWaypoint + LOOKAHEAD_WPS and dist < STOP_DISTANCE and stop0) 
+        stop2 = (tl_index == closestWaypoint and dist < STOP_DISTANCE and stop0)
+        stop3 = (tl_index + STOP_HYST < closestWaypoint and stop0 and self.prev_action == "STOP" and dist == 99999)
         return  stop1 or stop2 or stop3
 
     def check_slow(self, tl_state, dist):
@@ -183,9 +185,10 @@ class WaypointUpdater(object):
         end = closestWaypoint + LOOKAHEAD_WPS
         if end > len(waypoints) - 1:
            end = len(waypoints) - 1
+        a = ACC_FACTOR * self.accel_limit
         for idx in range(closestWaypoint, end):
             dist = self.distance(waypoints, closestWaypoint, idx+1)
-            velocity = math.sqrt(init_vel**2 + 2 * self.accel_limit * dist)
+            velocity = math.sqrt(init_vel**2 + 2 * a * dist)
             if velocity > self.cruise_speed:
                velocity = self.cruise_speed
             self.set_waypoint_velocity(waypoints, idx, velocity)
