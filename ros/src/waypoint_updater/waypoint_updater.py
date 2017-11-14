@@ -24,7 +24,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200# Number of waypoints we will publish.
-STOP_DISTANCE = 2.00# Distance in 'm' from TL stop line from which the car starts to stop.
+STOP_DISTANCE = 3.00# Distance in 'm' from TL stop line from which the car starts to stop.
 STOP_HYST = 2# Margin of error for a stopping car.
 SAFE_DECEL_FACTOR = 0.1# Multiplier to the decel limit.
 ACC_FACTOR = 0.5# Multiplier to the accel limit
