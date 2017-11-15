@@ -134,12 +134,12 @@ double PurePursuit::calcAcceleration() const
 
   if(a < -10.0) { a = -10.0; }
 
-  if(a < -9) {
+  /*if(a < -9) {
     ROS_ERROR_STREAM("pure_pursuit: HARD BRAKE i=" << i << "/" << current_waypoints_.getSize() << " dx=" << dx
                      << " vo=" << vo << " vf=" << vf << " CmdVel=" << getCmdVelocity(i));
   } else {
     ROS_ERROR_STREAM("pure_pursuit: wp=" << i << " dx=" << dx << " vo=" << vo << " vf=" << vf << " a=" << a);
-  }
+  }*/
 
   return a;
 }
