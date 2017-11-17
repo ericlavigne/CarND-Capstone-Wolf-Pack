@@ -128,7 +128,7 @@ class WaypointUpdater(object):
 
     def check_slow(self, tl_state, dist):
         slow1 = (dist > STOP_DISTANCE and dist < self.safe_distance and tl_state != "NO" and dist != 99999)
-        slow2 = (dist > STOP_DISTANCE and dist < 2 * STOP_DISTANCE and tl_state != "NO" and dist != 99999)
+        slow2 = (dist > STOP_DISTANCE and dist < 2 * STOP_DISTANCE and tl_state != "NO" and dist != 99999 and self.car_curr_vel > self.mph_to_mps(3.0))
         return  slow1 or slow2
 
     def check_go(self, tl_index, tl_state, closestWaypoint, dist):
