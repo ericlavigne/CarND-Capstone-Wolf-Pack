@@ -9,7 +9,9 @@ from flask import Flask, render_template
 from bridge import Bridge
 from conf import conf
 
-sio = socketio.Server()
+eventlet.monkey_patch()#Solution from "Car freezes in simulator" problem
+
+sio = socketio.Server(async_mode='eventlet')#Solution from "Car freezes in simulator" problem
 app = Flask(__name__)
 msgs = []
 
