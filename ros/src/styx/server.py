@@ -4,14 +4,13 @@ import socketio
 import eventlet
 import eventlet.wsgi
 import time
+eventlet.monkey_patch()
 from flask import Flask, render_template
 
 from bridge import Bridge
 from conf import conf
 
-eventlet.monkey_patch()#Solution from "Car freezes in simulator" problem
-
-sio = socketio.Server(async_mode='eventlet')#Solution from "Car freezes in simulator" problem
+sio = socketio.Server(async_mode='eventlet')
 app = Flask(__name__)
 msgs = []
 
