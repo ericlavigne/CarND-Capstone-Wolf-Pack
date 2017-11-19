@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseStamped, TwistStamped
 from styx_msgs.msg import Lane, Waypoint, CustomTrafficLight
 
 import math
+import os
 import time
 import tf
 from numpy import random
@@ -62,6 +63,11 @@ class WaypointUpdater(object):
         self.cruise_speed = self.kmph_to_mps(rospy.get_param('~/waypoint_loader/velocity', 40.0))
         self.decel_limit = abs(rospy.get_param('~/twist_controller/decel_limit', -5))
         self.accel_limit = rospy.get_param('~/twist_controller/accel_limit', 1)
+
+        env_velocity = os.getenv('VELOCITY','0')
+        if float(env_velocity) > 0.01:
+            self.cruise_speed = self.kmph_to_mps(float(env_velocity))
+
         while not rospy.is_shutdown():
                 if (self.car_position != None and self.waypoints != None and self.tl_state != None and self.car_curr_vel != None):
                        self.safe_distance = (self.car_curr_vel ** 2)/(2 * self.decel_limit * SAFE_DECEL_FACTOR)
