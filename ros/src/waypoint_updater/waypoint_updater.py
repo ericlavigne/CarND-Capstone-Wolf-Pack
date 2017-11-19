@@ -150,7 +150,14 @@ class WaypointUpdater(object):
               action = "GO"
               return action
         elif tl_index == None or tl_state == "NO" or tl_index == -1:
-            action = "GO"
+            if tl_index != -1:
+               dist = self.distance_to_tl
+               if dist < self.safe_distance:
+                  action = "SLOW"
+               else:
+                  action = "GO"
+            else:
+               action = "GO"
             return action 
 
     def stop_waypoints(self, closestWaypoint, waypoints):
