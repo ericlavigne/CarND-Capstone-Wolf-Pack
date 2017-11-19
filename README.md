@@ -66,6 +66,7 @@ We went beyond the project requirements in several ways:
 #### Traffic Light Detection
 
 * [UNet architecture](https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/)
+* NN is pretrained on medical images from [Kaggle competition](https://www.kaggle.com/c/ultrasound-nerve-segmentation/data)
 * Trained on black-and-white images
 * Separate models for simulator and Carla
 
