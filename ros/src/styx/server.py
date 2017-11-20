@@ -15,6 +15,7 @@ apply_monkey_patch = (monkey_var in ['true','TRUE','yes','YES','on','ON'])
 sio = None
 if apply_monkey_patch:
     # Solution from "Car freezes in simulator" problem
+    eventlet.sleep() # workaround https://github.com/eventlet/eventlet/issues/401
     eventlet.monkey_patch()
     sio = socketio.Server(async_mode='eventlet')
 else:
