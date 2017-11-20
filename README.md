@@ -67,7 +67,8 @@ detection and classification, trajectory planning, and control.
 * [UNet architecture](https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/)
 * NN is pretrained on medical images from [Kaggle competition](https://www.kaggle.com/c/ultrasound-nerve-segmentation/data)
 * Trained on black-and-white images
-* Separate models for simulator and Carla
+* Custom loss function is used based on [Dice coefficient](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient)
+* Separate models for simulator (Dice coefficient is 0.81) and Carla (Dice coefficient is 0.66)
 * See training code in [detector](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/tree/master/detector) and inference code in [tl\_detector.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/ros/src/tl_detector/tl_detector.py).
 
 #### Traffic Light Classification
