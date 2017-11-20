@@ -8,7 +8,7 @@ detection and classification, trajectory planning, and control.
 
 ![simulator and rviz](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/car-stopping.gif)
 
-We went beyond the project requirements in several ways:
+### Beyond the Requirements
 
 * Reloading PID parameters while the car is running for faster tuning
 * Trajectory plans with multiple successive behaviors so that trajectory planner works well at low frequency
@@ -60,8 +60,7 @@ We went beyond the project requirements in several ways:
 
 #### Visualization
 
-* animated GIF of visualization with link to full video
-* describe purpose and details of visualization
+[![visualization-video](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/visualization-video-thumb.png)](https://www.youtube.com/watch?v=JTuVzKwYBiU)
 
 #### Traffic Light Detection
 
@@ -69,41 +68,62 @@ We went beyond the project requirements in several ways:
 * NN is pretrained on medical images from [Kaggle competition](https://www.kaggle.com/c/ultrasound-nerve-segmentation/data)
 * Trained on black-and-white images
 * Separate models for simulator and Carla
+* See training code in [detector](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/tree/master/detector) and inference code in [tl\_detector.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/ros/src/tl_detector/tl_detector.py).
 
 #### Traffic Light Classification
 
-* describe network architecture
-* validation accuracy for each class
+| Simulator Model         | Carla Model                            |
+|:-----------------------:|:--------------------------------------:|
+| ![simulator model](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/classifier_model_simulator.png)          | ![carla model](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/classifier_model_carla.png)
+
+* Four output classes: GREEN, YELLOW, RED, NONE.
+* Test accuracy was 100% for simulator images and 84.7% for Carla images.
+* See inference code in [tl\_classifier.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/ros/src/tl_detector/light_classification/tl_classifier.py).
 
 #### Trajectory Planner
 
-![decision function](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/traffic-light-planning.png)
+| Decision Function       | Ideal Scenario                         |
+|:-----------------------:|:--------------------------------------:|
+| ![decision function](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/traffic-light-planning.png)          | ![ideal scenario](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/planner-scenario-ideal.png)
 
-* graphic for decision function
-* describe scenarios
+* Safe distance allows deceleration at 10% of maximum deceleration while still stopping in time.
+* If further than safe distance from the traffic light, the car ignores the traffic light's color and accelerates up to cruising speed.
+* Within safe distance of a yellow or red light, car decelerates at whatever rate would result in stopping exactly on the stop line.
+* When car within stopping distance (3 meters) of yellow or red light, it will decelerate at maximum deceleration.
+* When car is less than hysteresis distance (1 meter) past the stop line at a yellow or red light, it will continue max deceleration.
+* When car is more than hysteresis distance (1 meter) past the stop line, or if the traffic light turns green, car will accelerate up to cruising speed.
+* See code in [waypoint\_updater.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/ros/src/waypoint_updater/waypoint_updater.py).
 
 #### Waypoint Follower
 
-* original version including problems
-* how we solved problems
-* link to branch until merged
+* Substantial improvement over original "pure pursuit" version provided by Udacity
+* Originally determined intended speed based only on first waypoint, which quickly became stale
+* Originally reported intended speed to stability controller, which also quickly became stale
+* Changed to consider current position and varying lookahead distance depending on speed
+* Changed message format from speed to acceleration, which is much more stable
+* See code in [pure\_pursuit\_core.cpp#calcAcceleration](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/waypoint_follower_acceleration_2017-11-12/ros/src/waypoint_follower/src/pure_pursuit_core.cpp#L104).
 
 #### Stability Controller
 
-* Online PID tuning
-* Tuned for high speed in simulator
+![online PID tuning](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/pid-tuning.png)
+
+* Tuned PID parameters with sliders while the simulator was running.
+* Tuned for high speed in simulator.
+* Needed for moderating the output of waypoint follower and preventing overshoot.
+* See code in [stability_controller.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/ros/src/twist_controller/stability_controller.py).
 
 #### Gain Controller
 
-* why needed
-* complications in throttle gain model
-* simplification: series of linearized models
-* exploration
-* link to branch until merged
+* We know that the real car has a much more sensitive throttle and brake than the simulator, but don't have enough information to calculate this difference.
+* The effect of throttle on acceleration is also very non-linear depending on car's speed.
+* Use a series of linear models for 0-10mph, 10-20mph, 20-30mph, etc.
+* For each of these small speed ranges, assume required throttle or brake is linear function of current speed and intended acceleration.
+* Collect data from car behavior for on-the-fly calibration of throttle and brake models
+* See code in [gain_controller.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/gain_controller_2017-10-15/ros/src/twist_controller/gain_controller.py).
 
 #### Automated Testing
 
-[![rostest howto video](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/rostest-youtube.png)](https://www.youtube.com/watch?v=j7-_flWgJ88&feature=youtu.be)
+[![rostest howto video](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/rostest-youtube.png)](https://www.youtube.com/watch?v=j7-_flWgJ88)
 
 ---
 
