@@ -6,7 +6,7 @@ We developed software to guide a real self-driving car around a test track.
 Using the Robot Operating System (ROS), we created nodes for traffic light
 detection and classification, trajectory planning, and control.
 
-TODO || Side-by-side animated GIFs: Driving in Simulator, RViz Visualization
+![simulator and rviz](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/car-stopping.gif)
 
 We went beyond the project requirements in several ways:
 
