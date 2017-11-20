@@ -86,9 +86,10 @@ detection and classification, trajectory planning, and control.
 |:-----------------------:|:--------------------------------------:|
 | ![decision function](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/traffic-light-planning.png)          | ![ideal scenario](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/planner-scenario-ideal.png)
 
+* Acceleration and deceleration profiles are governed by the kinematic equations of motion. 
 * Safe distance allows deceleration at 10% of maximum deceleration while still stopping in time.
 * If further than safe distance from the traffic light, the car ignores the traffic light's color and accelerates up to cruising speed.
-* Within safe distance of a yellow or red light, car decelerates at whatever rate would result in stopping exactly on the stop line.
+* Within safe distance of a traffic light, car decelerates at whatever rate would result in stopping exactly on the stop line.
 * When car within stopping distance (3 meters) of yellow or red light, it will decelerate at maximum deceleration.
 * When car is less than hysteresis distance (1 meter) past the stop line at a yellow or red light, it will continue max deceleration.
 * When car is more than hysteresis distance (1 meter) past the stop line, or if the traffic light turns green, car will accelerate up to cruising speed.
