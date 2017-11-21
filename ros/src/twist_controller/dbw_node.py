@@ -65,7 +65,7 @@ class DBWNode(object):
         self.gain_controller = GainController(max_throttle=1.0, max_brake=1.0, max_steer_angle=max_steer_angle,
                                               delay_seconds=1.0, steer_ratio=steer_ratio)
 
-        self.goal_linear = [0,0]
+        self.goal_acceleration = 0
         self.goal_yaw_rate = 0.
         self.current_linear = [0,0]
 
@@ -85,11 +85,12 @@ class DBWNode(object):
         return config
 
     def twist_cmd_callback(self, msg):
-        goal_x = msg.twist.linear.x
-        if (goal_x == 0 or self.goal_linear[0] == 0) and (goal_x != self.goal_linear[0]): #reset the damn thing since we need to hard stop
+        new_goal_acceleration = msg.twist.linear.x
+        if new_goal_acceleration < 0 and self.goal_acceleration > 0:
             self.twist_controller.reset_throttle_pid()
+        #rospy.logwarn("Updating intended acceleration: %s", new_goal_acceleration)
 
-        self.goal_linear = [msg.twist.linear.x, msg.twist.linear.y]
+        self.goal_acceleration = new_goal_acceleration
         self.goal_yaw_rate = msg.twist.angular.z
 
     def current_velocity_callback(self, msg):
@@ -108,7 +109,7 @@ class DBWNode(object):
             angular_acceleration = 0.0
             deltat = 0.02
 
-            goal_linear_acceleration, goal_angular_velocity = self.twist_controller.control(self.goal_linear,
+            goal_linear_acceleration, goal_angular_velocity = self.twist_controller.control(self.goal_acceleration,
                                                                                             self.goal_yaw_rate,
                                                                                             self.current_linear,
                                                                                             deltat,
@@ -117,8 +118,8 @@ class DBWNode(object):
             # rospy.logwarn("c:%.2f, g:%.2f, o:%.2f", self.current_linear[0],
             #               self.goal_linear[0], goal_linear_acceleration)
 
-            if(self.goal_linear[0] != 0 and goal_linear_acceleration < 0 and goal_linear_acceleration > -self.brake_deadband):
-                goal_linear_acceleration = 0
+            #if(self.goal_linear[0] != 0 and goal_linear_acceleration < 0 and goal_linear_acceleration > -self.brake_deadband):
+            #    goal_linear_acceleration = 0
 
             throttle, brake, steering = self.gain_controller.control(goal_linear_acceleration, goal_angular_velocity,
                                                                      linear_speed, angular_velocity,
