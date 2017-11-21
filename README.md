@@ -79,6 +79,7 @@ detection and classification, trajectory planning, and control.
 
 * Four output classes: GREEN, YELLOW, RED, NONE.
 * Test accuracy was 100% for simulator images and 84.7% for Carla images.
+* See model and training code for [Carla](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/tl_classifier/TL_Classifier-Carla.ipynb) and [Simulator](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/tl_classifier/TL_Classifier-Simulator.ipynb) in iPython notebooks.
 * See inference code in [tl\_classifier.py](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/blob/master/ros/src/tl_detector/light_classification/tl_classifier.py).
 
 #### Trajectory Planner
@@ -87,7 +88,7 @@ detection and classification, trajectory planning, and control.
 |:-----------------------:|:--------------------------------------:|
 | ![decision function](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/traffic-light-planning.png)          | ![ideal scenario](https://github.com/ericlavigne/CarND-Capstone-Wolf-Pack/raw/readme_sketch_2017-11-18/imgs/planner-scenario-ideal.png)
 
-* Acceleration and deceleration profiles are governed by the kinematic equations of motion. 
+* Acceleration and deceleration profiles are governed by the kinematic equations of motion.
 * Safe distance allows deceleration at 10% of maximum deceleration while still stopping in time.
 * If further than safe distance from the traffic light, the car ignores the traffic light's color and accelerates up to cruising speed.
 * Within safe distance of a traffic light, car decelerates at whatever rate would result in stopping exactly on the stop line.
