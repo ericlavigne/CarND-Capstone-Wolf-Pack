@@ -49,6 +49,7 @@ detection and classification, trajectory planning, and control.
   * [Installation](#installation)
   * [Running the Simulator](#running-the-simulator)
   * [Running the Simulator with Visualisation](#running-the-simulator-with-visualisation)
+  * [Troubleshooting](#troubleshooting)
   * [Running the Project on a Real Car](#running-the-project-on-a-real-car)
   * [Running Automated Tests](#running-automated-tests)
 
@@ -179,6 +180,14 @@ roslaunch launch/wolfpack.launch use_ground_truth:=true
 
 # running rqt_gui in a different terminal
 rqt --perspective-file "$(rospack find wolfpack_visualisation)/launch/rqt.perspective"
+```
+
+#### Troubleshooting
+
+If the car does not move or behaves poorly, try applying the "eventlet monkey patch" with this modification to the roslaunch command. This helps on some computers and hurts on others, so try both ways if you're having problems.
+
+```bash
+EVENTLET_MONKEY_PATCH=true roslaunch launch/styx.launch
 ```
 
 #### Running the Project on a Real Car
