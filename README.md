@@ -163,7 +163,7 @@ pip install -r requirements.txt
 3. Make and run styx
 ```bash
 cd ros
-catkin_make
+./rebuild-all.sh
 source devel/setup.sh
 roslaunch launch/styx.launch
 ```
@@ -172,7 +172,7 @@ roslaunch launch/styx.launch
 #### Running the Simulator with Visualisation
 ```bash
 cd ros
-catkin_make
+./rebuild-all.sh
 source devel/setup.sh
 roslaunch launch/wolfpack.launch use_ground_truth:=true
 
