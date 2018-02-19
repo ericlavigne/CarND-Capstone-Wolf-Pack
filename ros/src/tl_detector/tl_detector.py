@@ -61,7 +61,7 @@ class TLDetector(object):
         self.detector_model._make_predict_function()
         self.resize_width = self.config['tl']['detector_resize_width']
         self.resize_height = self.config['tl']['detector_resize_height']
-        
+
         self.resize_height_ratio = self.config['camera_info']['image_height']/float(self.resize_height)
         self.resize_width_ratio = self.config['camera_info']['image_width']/float(self.resize_width)
         self.middle_col = self.resize_width/2
@@ -217,7 +217,7 @@ class TLDetector(object):
         left = np.max(left_side) if left_side.size > 0 else 0
         right_side = zero_colum_indexes[zero_colum_indexes > column_index]
         right = np.min(right_side) if right_side.size > 0 else self.resize_width
-        return image[int(top*self.resize_height_ratio):int(bottom*self.resize_height_ratio), int(left*self.resize_width_ratio):int(right*self.resize_width_ratio)] 
+        return image[int(top*self.resize_height_ratio):int(bottom*self.resize_height_ratio), int(left*self.resize_width_ratio):int(right*self.resize_width_ratio)]
 
     def detect_traffic_light(self, cv_image):
         resize_image = cv2.cvtColor(cv2.resize(cv_image, (self.resize_width, self.resize_height)), cv2.COLOR_RGB2GRAY)
@@ -226,8 +226,8 @@ class TLDetector(object):
             mean = np.mean(resize_image) # mean for data centering
             std = np.std(resize_image) # std for data normalization
 
-            resize_image -= mean
-            resize_image /= std
+            resize_image = resize_image - mean
+            resize_image = resize_image / std
 
         image_mask = self.detector_model.predict(resize_image[None, :, :, :], batch_size=1)[0]
         image_mask = (image_mask[:,:,0]*255).astype(np.uint8)
