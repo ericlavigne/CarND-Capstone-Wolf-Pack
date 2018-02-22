@@ -191,12 +191,14 @@ class WaypointUpdater(object):
             self.final_waypoints.append(waypoints[idx])
 
     def slow_waypoints(self, closestWaypoint, tl_index, waypoints):
-        dist_to_TL = self.distance_to_tl
+        dist_to_TL = self.distance_to_tl + 0.1 # fix for division by 0
         slow_decel = (self.car_curr_vel ** 2)/(2 * dist_to_TL)
         if slow_decel > self.decel_limit:
            slow_decel = self.decel_limit
         init_vel = self.car_curr_vel
         end = closestWaypoint + LOOKAHEAD_WPS
+        if end > len(waypoints) - 1: # fix for index out of range
+           end = len(waypoints) - 1
         for idx in range(closestWaypoint, end):
             dist = self.distance(waypoints, closestWaypoint, idx+1)
             if (idx < tl_index):
