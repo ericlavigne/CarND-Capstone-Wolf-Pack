@@ -105,7 +105,7 @@ class GainController(object):
     def __init__(self, max_throttle, max_brake):
         self.max_throttle = max_throttle
         self.max_brake = max_brake
-        self.num_bins = 5
+        self.num_bins = 10
         self.bin_size = 10
         mean, stdev = motion_model_initial_state(self.num_bins)
         self.kalman = Kalman(mean,stdev)
