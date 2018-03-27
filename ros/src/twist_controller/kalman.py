@@ -123,12 +123,15 @@ class Kalman(object):
         self.regularize()
 
     def regularize(self):
-        # Ensure numerical stability by keeping the covariance positive
-
-        self.P = np.maximum(self.P, 0)
-
         # Ensure numerical stability via some hints from a StackExchange answer
         # https://robotics.stackexchange.com/questions/2000/maintaining-positive-definite-property-for-covariance-in-an-unscented-kalman-fil
 
+        # Covariance matrix should be symmetric P[i,j] = P[j,i]
+        # with each i,j/j,i pair containing the covariance between features i and j
         self.P = 0.5 * (self.P + self.P.transpose())
-        self.P = self.P + 0.001 * np.identity(self.P.shape[0])
+
+        # Diagonal values should be positive
+        # representing the individual uncertainties of each feature
+        for i in range(self.P.shape[0]):
+            if self.P[i,i] < 0.001:
+                self.P[i,i] = 0.001
