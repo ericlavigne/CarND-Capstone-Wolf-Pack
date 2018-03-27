@@ -47,7 +47,7 @@ class DBWNode(object):
         accel_limit = rospy.get_param('~accel_limit', 1.)
         wheel_radius = rospy.get_param('~wheel_radius', 0.2413)
         wheel_base = rospy.get_param('~wheel_base', 2.8498)
-        steer_ratio = rospy.get_param('~steer_ratio', 14.8)
+        self.steer_ratio = rospy.get_param('~steer_ratio', 14.8)
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
 
@@ -62,8 +62,7 @@ class DBWNode(object):
         self.dbw_enabled = False
 
         self.twist_controller = TwistController(max_steer_angle, accel_limit, decel_limit)
-        self.gain_controller = GainController(max_throttle=1.0, max_brake=1.0, max_steer_angle=max_steer_angle,
-                                              delay_seconds=1.0, steer_ratio=steer_ratio)
+        self.gain_controller = GainController(max_throttle=1.0, max_brake=1.0)
 
         self.goal_acceleration = 0
         self.goal_yaw_rate = 0.
@@ -121,10 +120,12 @@ class DBWNode(object):
             #if(self.goal_linear[0] != 0 and goal_linear_acceleration < 0 and goal_linear_acceleration > -self.brake_deadband):
             #    goal_linear_acceleration = 0
 
-            throttle, brake, steering = self.gain_controller.control(goal_linear_acceleration, goal_angular_velocity,
-                                                                     linear_speed, angular_velocity,
-                                                                     linear_acceleration, angular_acceleration,
-                                                                     deltat, self.dbw_enabled)
+            steering = goal_angular_velocity * self.steer_ratio
+
+            throttle, brake = self.gain_controller.control(goal_linear_acceleration,
+                                                           linear_speed,
+                                                           deltat,
+                                                           self.dbw_enabled)
 
             if brake > 0:
                 brake = brake * BrakeCmd.TORQUE_MAX / -self.decel_limit
